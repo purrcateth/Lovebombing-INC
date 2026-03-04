@@ -39,9 +39,33 @@ export default function AddToBombPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-5 py-10">
-        <div className="lb-card px-8 py-6">
-          <p className="text-lg font-medium text-[#7a4150]">Loading...</p>
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px",
+        }}
+      >
+        <div
+          style={{
+            border: "2px solid #000",
+            background: "#C0C0C0",
+            padding: "20px 30px",
+            boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "'VT323', monospace",
+              fontSize: "16px",
+              color: "#000",
+              margin: 0,
+            }}
+          >
+            Loading...
+          </p>
         </div>
       </main>
     );
@@ -49,14 +73,86 @@ export default function AddToBombPage() {
 
   if (notFound) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-5 py-10">
-        <div className="lb-card w-full max-w-lg px-8 py-10 text-center">
-          <p className="text-6xl">💔</p>
-          <h1 className="lb-title mt-2 text-6xl text-[#8e2740]">This lovebomb doesn&apos;t exist</h1>
-          <div className="mt-6">
-            <Link href="/create" className="lb-btn lb-btn-primary inline-flex">
-              Create Your Own 💌
-            </Link>
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "480px",
+            border: "2px solid #000",
+            background: "#C0C0C0",
+            boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* Title bar */}
+          <div
+            style={{
+              height: "24px",
+              background:
+                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+              borderBottom: "2px solid #000",
+              display: "flex",
+              alignItems: "center",
+              padding: "0 8px",
+            }}
+          >
+            <div
+              style={{
+                width: "12px",
+                height: "12px",
+                border: "1px solid #000",
+                background: "#C0C0C0",
+              }}
+            />
+            <span
+              style={{
+                flex: 1,
+                textAlign: "center",
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                fontWeight: "bold",
+              }}
+            >
+              Error
+            </span>
+          </div>
+          <div style={{ padding: "30px 24px", textAlign: "center" }}>
+            <p style={{ fontSize: "48px", margin: 0 }}>&#x26A0;</p>
+            <h1
+              style={{
+                fontFamily: "Georgia, serif",
+                fontWeight: "bold",
+                color: "#1a1a6e",
+                fontSize: "28px",
+                margin: "8px 0 0 0",
+              }}
+            >
+              This lovebomb doesn&apos;t exist
+            </h1>
+            <div style={{ marginTop: "16px" }}>
+              <Link
+                href="/create"
+                style={{
+                  padding: "6px 20px",
+                  border: "2px outset #DFDFDF",
+                  background: "#C0C0C0",
+                  fontFamily: "'VT323', monospace",
+                  fontSize: "16px",
+                  color: "#000",
+                  textDecoration: "none",
+                  fontWeight: "bold",
+                }}
+              >
+                Create Your Own
+              </Link>
+            </div>
           </div>
         </div>
       </main>
@@ -65,32 +161,127 @@ export default function AddToBombPage() {
 
   if (!nameSubmitted) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-5 py-10">
-        <div className="lb-card w-full max-w-xl px-7 py-10 text-center sm:px-12">
-          <p className="text-sm uppercase tracking-[0.2em] text-[#b25266]">Collaborative mode</p>
-          <h1 className="lb-title mt-2 text-6xl leading-none text-[#8e2740] sm:text-7xl">Add Your Lovebombs ✨</h1>
-          <p className="mt-3 text-sm text-[#8a5563]">What&apos;s your name?</p>
-
-          <form
-            className="mt-7 space-y-4 text-left"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (name.trim()) setNameSubmitted(true);
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "480px",
+            border: "2px solid #000",
+            background: "#C0C0C0",
+            boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* Pinstriped title bar */}
+          <div
+            style={{
+              height: "24px",
+              background:
+                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+              borderBottom: "2px solid #000",
+              display: "flex",
+              alignItems: "center",
+              padding: "0 8px",
             }}
           >
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={30}
-              autoFocus
-              className="w-full rounded-2xl border border-[#ffc4d0] bg-white px-4 py-3 outline-none focus:border-[#ff90a6]"
-              placeholder="Type your name"
+            <div
+              style={{
+                width: "12px",
+                height: "12px",
+                border: "1px solid #000",
+                background: "#C0C0C0",
+              }}
             />
-            <button type="submit" disabled={!name.trim()} className="lb-btn lb-btn-primary w-full disabled:opacity-50">
-              Let&apos;s go
-            </button>
-          </form>
+            <span
+              style={{
+                flex: 1,
+                textAlign: "center",
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                fontWeight: "bold",
+              }}
+            >
+              Collaborative Mode
+            </span>
+          </div>
+
+          {/* Window body */}
+          <div style={{ padding: "30px 24px", textAlign: "center" }}>
+            <h1
+              style={{
+                fontFamily: "Georgia, serif",
+                fontWeight: "bold",
+                color: "#1a1a6e",
+                fontSize: "28px",
+                margin: 0,
+              }}
+            >
+              Add Your Lovebombs
+            </h1>
+            <p
+              style={{
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                color: "#000",
+                marginTop: "8px",
+              }}
+            >
+              What&apos;s your name?
+            </p>
+
+            <form
+              style={{ marginTop: "16px", textAlign: "left" }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (name.trim()) setNameSubmitted(true);
+              }}
+            >
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={30}
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "4px 8px",
+                  fontFamily: "'VT323', monospace",
+                  fontSize: "16px",
+                  background: "#FFFFFF",
+                  border: "2px inset #DFDFDF",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+                placeholder="Type your name"
+              />
+              <button
+                type="submit"
+                disabled={!name.trim()}
+                style={{
+                  width: "100%",
+                  marginTop: "12px",
+                  padding: "6px 20px",
+                  border: "2px outset #DFDFDF",
+                  background: "#C0C0C0",
+                  fontFamily: "'VT323', monospace",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  color: "#000",
+                  cursor: "pointer",
+                  opacity: !name.trim() ? 0.5 : 1,
+                }}
+              >
+                Let&apos;s go
+              </button>
+            </form>
+          </div>
         </div>
       </main>
     );

@@ -38,26 +38,26 @@ const objectHasAnimation = (obj: fabric.FabricObject) => {
   return false;
 };
 
-// ─── Mac OS 9 Platinum Inline Styles ───────────────────────────────────
+// ─── Mac OS Retro Inline Styles ───────────────────────────────────
 const MAC = {
-  bg: "#fff2ec",
-  bgDark: "#ffc7b2",
-  bgLight: "#fff9f4",
-  border: "#f3a7b9",
-  borderDark: "#d1738a",
+  bg: "#C0C0C0",
+  bgDark: "#808080",
+  bgLight: "#DFDFDF",
+  border: "#808080",
+  borderDark: "#000000",
   borderLight: "#FFFFFF",
-  titleGradient: "linear-gradient(180deg, #ffdce5 0%, #ffc8d5 100%)",
+  pinstripes:
+    "repeating-linear-gradient(0deg, #FFFFFF 0px, #FFFFFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
   inset:
-    "inset 1px 1px 2px rgba(154,56,84,0.2), inset -1px -1px 1px rgba(255,255,255,0.7)",
+    "inset 1px 1px 2px rgba(0,0,0,0.3), inset -1px -1px 1px rgba(255,255,255,0.5)",
   outset:
-    "1px 1px 0px rgba(154,56,84,0.15), inset 1px 1px 0px rgba(255,255,255,0.7), inset -1px -1px 0px rgba(154,56,84,0.12)",
+    "1px 1px 0px rgba(0,0,0,0.2), inset 1px 1px 0px rgba(255,255,255,0.7), inset -1px -1px 0px rgba(0,0,0,0.15)",
   btnOutset:
-    "inset 1px 1px 0px rgba(255,255,255,0.9), inset -1px -1px 0px rgba(154,56,84,0.25), 1px 1px 1px rgba(154,56,84,0.15)",
+    "inset 1px 1px 0px rgba(255,255,255,0.9), inset -1px -1px 0px rgba(0,0,0,0.25), 1px 1px 1px rgba(0,0,0,0.15)",
   btnActive:
-    "inset 1px 1px 2px rgba(154,56,84,0.3), inset -1px -1px 1px rgba(255,255,255,0.4)",
-  font: "'DM Sans', sans-serif",
-  fontSize: "14px",
-  cursor: "url(/cursors/hand.svg) 6 0, pointer",
+    "inset 1px 1px 2px rgba(0,0,0,0.3), inset -1px -1px 1px rgba(255,255,255,0.4)",
+  font: "'VT323', 'Geneva', monospace",
+  fontSize: "16px",
 };
 
 // Reusable style objects
@@ -66,10 +66,9 @@ const styles = {
     display: "flex",
     height: "100vh",
     flexDirection: "column" as const,
-    background: MAC.bg,
+    background: "transparent",
     fontFamily: MAC.font,
     fontSize: MAC.fontSize,
-    cursor: `url(/cursors/hand.svg) 6 0, default`,
   },
   rootDesktop: {
     flexDirection: "row" as const,
@@ -78,98 +77,90 @@ const styles = {
   titleBar: {
     display: "flex",
     alignItems: "center",
-    height: "22px",
-    padding: "0 6px",
-    background: MAC.titleGradient,
-    borderBottom: `1px solid ${MAC.borderDark}`,
+    height: "24px",
+    padding: "0 8px",
+    background: MAC.pinstripes,
+    borderBottom: `2px solid ${MAC.borderDark}`,
     gap: "8px",
     userSelect: "none" as const,
     flexShrink: 0,
   },
-  titleBtnGroup: {
-    display: "flex",
-    gap: "4px",
-    alignItems: "center",
-  },
-  closeBtn: {
+  closeBox: {
     width: "12px",
     height: "12px",
-    borderRadius: "50%",
-    background: "#ff9db2",
-    border: `1px solid #d86f87`,
-    cursor: MAC.cursor,
-  },
-  minimizeBtn: {
-    width: "12px",
-    height: "12px",
-    borderRadius: "50%",
-    background: "#ffd59b",
-    border: `1px solid #d4a86d`,
-    cursor: MAC.cursor,
-  },
-  zoomBtn: {
-    width: "12px",
-    height: "12px",
-    borderRadius: "50%",
-    background: "#bdeca9",
-    border: `1px solid #88be72`,
-    cursor: MAC.cursor,
+    border: `1px solid ${MAC.borderDark}`,
+    background: MAC.bg,
   },
   titleText: {
     flex: 1,
     textAlign: "center" as const,
-    fontSize: "12px",
+    fontSize: "16px",
     fontWeight: "bold" as const,
     color: "#000000",
-    letterSpacing: "0.5px",
     whiteSpace: "nowrap" as const,
     overflow: "hidden" as const,
     textOverflow: "ellipsis" as const,
     fontFamily: MAC.font,
   },
   titleCounter: {
-    fontSize: "11px",
-    color: "#333333",
+    fontSize: "14px",
+    color: "#000000",
     fontFamily: MAC.font,
     whiteSpace: "nowrap" as const,
+  },
+  // ─── Status Bar ──────────────────
+  statusBar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "20px",
+    padding: "0 8px",
+    background: MAC.bg,
+    borderTop: `1px solid ${MAC.borderDark}`,
+    fontSize: "14px",
+    fontFamily: MAC.font,
+    color: "#000000",
+    userSelect: "none" as const,
+    flexShrink: 0,
+    gap: "12px",
   },
   // ─── Mac Button ──────────────────
   btn: {
     padding: "3px 12px",
-    fontSize: "12px",
+    fontSize: "16px",
     fontFamily: MAC.font,
     background: MAC.bg,
-    border: `1px solid ${MAC.border}`,
-    borderRadius: "4px",
-    boxShadow: MAC.btnOutset,
-    cursor: MAC.cursor,
+    border: `2px outset ${MAC.bgLight}`,
+    borderRadius: "0px",
+    boxShadow: "none",
+    cursor: "pointer",
     color: "#000000",
     whiteSpace: "nowrap" as const,
     lineHeight: "1.4",
   },
   btnActive: {
     padding: "3px 12px",
-    fontSize: "12px",
+    fontSize: "16px",
     fontFamily: MAC.font,
-    background: "#999999",
-    border: `1px solid ${MAC.borderDark}`,
-    borderRadius: "4px",
-    boxShadow: MAC.btnActive,
-    cursor: MAC.cursor,
+    background: "#000000",
+    border: `2px inset ${MAC.bgDark}`,
+    borderRadius: "0px",
+    boxShadow: "none",
+    cursor: "pointer",
     color: "#FFFFFF",
     whiteSpace: "nowrap" as const,
     lineHeight: "1.4",
   },
   btnPrimary: {
     padding: "3px 16px",
-    fontSize: "12px",
+    fontSize: "16px",
     fontFamily: MAC.font,
-    background: "linear-gradient(135deg, #ff6b6b, #ff8ea1)",
-    border: `1px solid #ff6b6b`,
-    borderRadius: "999px",
-    boxShadow: "0 8px 16px rgba(255,107,107,0.35)",
-    cursor: MAC.cursor,
-    color: "#FFFFFF",
+    background: MAC.bg,
+    border: `2px outset ${MAC.bgLight}`,
+    borderRadius: "0px",
+    boxShadow: "none",
+    cursor: "pointer",
+    color: "#000000",
     fontWeight: "bold" as const,
     whiteSpace: "nowrap" as const,
     lineHeight: "1.4",
@@ -177,7 +168,7 @@ const styles = {
   // ─── Sticker Sidebar ──────────────────
   sidebar: {
     background: MAC.bg,
-    borderRight: `1px solid ${MAC.borderDark}`,
+    border: `2px solid ${MAC.borderDark}`,
     overflowY: "auto" as const,
     display: "flex",
     flexDirection: "column" as const,
@@ -185,6 +176,7 @@ const styles = {
   sidebarDesktop: {
     width: "220px",
     height: "100vh",
+    boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
   },
   sidebarMobile: {
     position: "fixed" as const,
@@ -193,18 +185,16 @@ const styles = {
     right: 0,
     maxHeight: "50vh",
     zIndex: 40,
-    borderTop: `1px solid ${MAC.borderDark}`,
-    borderRight: "none",
-    transition: "transform 0.25s ease-in-out",
+    borderTop: `2px solid ${MAC.borderDark}`,
   },
   paletteTitleBar: {
     display: "flex",
     alignItems: "center",
-    height: "18px",
-    padding: "0 6px",
-    background: MAC.titleGradient,
-    borderBottom: `1px solid ${MAC.borderDark}`,
-    fontSize: "11px",
+    height: "22px",
+    padding: "0 8px",
+    background: MAC.pinstripes,
+    borderBottom: `2px solid ${MAC.borderDark}`,
+    fontSize: "16px",
     fontWeight: "bold" as const,
     fontFamily: MAC.font,
     color: "#000000",
@@ -212,6 +202,7 @@ const styles = {
     position: "sticky" as const,
     top: 0,
     zIndex: 1,
+    gap: "6px",
   },
   stickerGrid: {
     display: "grid",
@@ -230,7 +221,7 @@ const styles = {
     background: "#FFFFFF",
     padding: "3px",
     cursor: "grab",
-    borderRadius: "8px",
+    borderRadius: "0px",
   },
   // ─── Canvas Area ──────────────────
   canvasArea: {
@@ -240,6 +231,9 @@ const styles = {
     minWidth: 0,
     minHeight: 0,
     position: "relative" as const,
+    border: `2px solid ${MAC.borderDark}`,
+    background: MAC.bg,
+    boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
   },
   canvasSunken: {
     flex: 1,
@@ -249,9 +243,9 @@ const styles = {
     overflow: "auto",
     margin: "4px",
     background: "#FFFFFF",
-    borderRadius: "2px",
+    borderRadius: "0px",
     boxShadow: MAC.inset,
-    border: `1px solid ${MAC.border}`,
+    border: `2px inset ${MAC.bgLight}`,
   },
   // ─── Toolbar ──────────────────
   toolbar: {
@@ -260,40 +254,38 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: "5px",
-    padding: "5px 10px",
-    background: MAC.bg,
-    borderTop: `1px solid ${MAC.borderDark}`,
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5)",
+    padding: "6px 10px",
+    background: "transparent",
+    flexShrink: 0,
   },
   toolbarDivider: {
     width: "1px",
     height: "20px",
     background: MAC.border,
     margin: "0 4px",
-    boxShadow: `1px 0 0 ${MAC.bgLight}`,
   },
   colorSwatch: {
     width: "18px",
     height: "18px",
-    border: "none",
-    cursor: MAC.cursor,
+    border: "1px solid #808080",
+    cursor: "pointer",
     padding: 0,
   },
   colorSwatchActive: {
     width: "18px",
     height: "18px",
     border: "2px solid #000000",
-    cursor: MAC.cursor,
+    cursor: "pointer",
     padding: 0,
   },
   colorPalette: {
     display: "flex",
     alignItems: "center",
     gap: "0px",
-    border: `1px solid ${MAC.borderDark}`,
+    border: `2px inset ${MAC.bgLight}`,
     padding: "2px",
     background: "#FFFFFF",
-    borderRadius: "2px",
+    borderRadius: "0px",
   },
   // ─── Share Popup ──────────────────
   overlay: {
@@ -309,8 +301,8 @@ const styles = {
   dialog: {
     background: MAC.bg,
     border: `2px solid ${MAC.borderDark}`,
-    borderRadius: "20px",
-    boxShadow: "0 20px 30px rgba(184, 77, 97, 0.2)",
+    borderRadius: "0px",
+    boxShadow: "3px 3px 0px rgba(0,0,0,0.5)",
     width: "100%",
     maxWidth: "420px",
     overflow: "hidden",
@@ -325,12 +317,12 @@ const styles = {
   input: {
     flex: 1,
     padding: "4px 6px",
-    fontSize: "12px",
+    fontSize: "16px",
     fontFamily: MAC.font,
     background: "#FFFFFF",
-    border: `1px solid ${MAC.borderDark}`,
-    borderRadius: "2px",
-    boxShadow: MAC.inset,
+    border: `2px inset ${MAC.bgLight}`,
+    borderRadius: "0px",
+    boxShadow: "none",
     outline: "none",
     color: "#000000",
   },
@@ -344,9 +336,9 @@ const styles = {
     gap: "6px",
     padding: "3px 8px",
     background: MAC.bg,
-    border: `1px solid ${MAC.borderDark}`,
-    borderRadius: "4px",
-    boxShadow: "2px 2px 4px rgba(0,0,0,0.2)",
+    border: `2px solid ${MAC.borderDark}`,
+    borderRadius: "0px",
+    boxShadow: "2px 2px 0px rgba(0,0,0,0.3)",
     zIndex: 10,
   },
   // ─── Resize Handle ──────────────────
@@ -910,6 +902,9 @@ export default function CanvasEditor({
     "#0000FF", "#800080", "#FF00FF",
   ];
 
+  // Estimate "disk" size from object count
+  const diskMB = Math.max(1, Math.round(objectCount * 0.3 + 0.5));
+
   return (
     <div
       style={{
@@ -924,18 +919,18 @@ export default function CanvasEditor({
           style={{
             ...styles.btn,
             position: "fixed",
-            bottom: "72px",
+            bottom: "56px",
             left: "12px",
             zIndex: 50,
-            fontSize: "11px",
+            fontSize: "16px",
             padding: "4px 10px",
           }}
         >
-          {sidebarOpen ? "✕ Close" : "☆ Stickers"}
+          {sidebarOpen ? "X Close" : "Stickers"}
         </button>
       )}
 
-      {/* ─── Sticker Sidebar (Mac OS 9 Palette Window) ─── */}
+      {/* ─── Sticker Sidebar (Mac Palette Window) ─── */}
       <div
         style={{
           ...styles.sidebar,
@@ -947,12 +942,13 @@ export default function CanvasEditor({
               }),
         }}
       >
-        {/* Palette title bar */}
+        {/* Palette title bar with pinstripes */}
         <div style={styles.paletteTitleBar}>
+          <div style={{ width: "10px", height: "10px", border: "1px solid #000", background: "#C0C0C0" }} />
           <span>Stickers</span>
         </div>
         <div style={{ padding: "8px" }}>
-          {/* Upload button */}
+          {/* Upload button — beveled, NOT rounded pill */}
           <label
             style={{
               ...styles.btn,
@@ -962,10 +958,11 @@ export default function CanvasEditor({
               justifyContent: "center",
               marginBottom: "8px",
               textAlign: "center" as const,
-              fontSize: "11px",
+              fontSize: "16px",
+              boxSizing: "border-box" as const,
             }}
           >
-            📁 Upload Image
+            Upload Image
             <input
               type="file"
               accept="image/*"
@@ -980,11 +977,10 @@ export default function CanvasEditor({
               <h3
                 style={{
                   margin: "0 0 4px 0",
-                  fontSize: "11px",
+                  fontSize: "14px",
                   fontWeight: "bold",
                   color: "#000000",
                   fontFamily: MAC.font,
-                  letterSpacing: "0.5px",
                 }}
               >
                 {category.name}
@@ -1026,19 +1022,13 @@ export default function CanvasEditor({
         </div>
       </div>
 
-      {/* ─── Main Canvas Area (Mac OS 9 Window) ─── */}
+      {/* ─── Main Canvas Area (Mac Finder Window) ─── */}
       <div style={styles.canvasArea}>
-        {/* Window title bar */}
+        {/* Pinstriped window title bar */}
         <div style={styles.titleBar}>
-          <div style={styles.titleBtnGroup}>
-            <div style={styles.closeBtn} />
-            <div style={styles.minimizeBtn} />
-            <div style={styles.zoomBtn} />
-          </div>
+          <div style={styles.closeBox} />
           <span style={styles.titleText}>
-            {isCollaborative
-              ? `${creatorName} — Adding to Lovebomb`
-              : `${creatorName} — Lovebomb`}
+            Lovebombing, INC.
           </span>
           <span style={styles.titleCounter}>
             {objectCount}/{MAX_OBJECTS}
@@ -1050,7 +1040,7 @@ export default function CanvasEditor({
           ref={containerRef}
           style={{
             ...styles.canvasSunken,
-            ...(dragOverCanvas ? { background: "#CCCCCC" } : {}),
+            ...(dragOverCanvas ? { background: "#E0E0E0" } : {}),
           }}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -1061,7 +1051,7 @@ export default function CanvasEditor({
               transform: `scale(${scale})`,
               transformOrigin: "center center",
               border: "1px solid #000000",
-              boxShadow: "2px 2px 6px rgba(0,0,0,0.25)",
+              boxShadow: "2px 2px 4px rgba(0,0,0,0.2)",
             }}
           >
             <canvas ref={canvasRef} />
@@ -1071,7 +1061,7 @@ export default function CanvasEditor({
         {/* Zoom indicator badge */}
         {zoomLevel !== 1 && (
           <div style={styles.zoomBadge}>
-            <span style={{ fontSize: "11px", color: "#000", fontFamily: MAC.font }}>
+            <span style={{ fontSize: "14px", color: "#000", fontFamily: MAC.font }}>
               {Math.round(zoomLevel * 100)}%
             </span>
             <button
@@ -1080,7 +1070,7 @@ export default function CanvasEditor({
                 fabricRef.current?.setViewportTransform([1, 0, 0, 1, 0, 0]);
                 setZoomLevel(1);
               }}
-              style={{ ...styles.btn, padding: "1px 8px", fontSize: "10px" }}
+              style={{ ...styles.btn, padding: "1px 8px", fontSize: "14px" }}
             >
               Reset
             </button>
@@ -1090,100 +1080,107 @@ export default function CanvasEditor({
         {/* Resize handle */}
         <div style={styles.resizeHandle} />
 
-        {/* ─── Bottom Toolbar ─── */}
-        <div style={styles.toolbar}>
-          {/* Pointer tool */}
-          <button
-            onClick={() => setActiveTool("pointer")}
-            style={activeTool === "pointer" ? styles.btnActive : styles.btn}
-          >
-            ➤ Select
-          </button>
-
-          {/* Pencil tool */}
-          <button
-            onClick={() => setActiveTool("pencil")}
-            style={activeTool === "pencil" ? styles.btnActive : styles.btn}
-          >
-            ✎ Draw
-          </button>
-
-          {/* Color palette */}
-          {activeTool === "pencil" && (
-            <div style={styles.colorPalette}>
-              {colors.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => setBrushColor(color)}
-                  style={{
-                    ...(brushColor === color
-                      ? styles.colorSwatchActive
-                      : styles.colorSwatch),
-                    backgroundColor: color,
-                  }}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Brush size slider */}
-          {activeTool === "pencil" && (
-            <input
-              type="range"
-              min={1}
-              max={20}
-              value={brushSize}
-              onChange={(e) => setBrushSize(Number(e.target.value))}
-              style={{ width: "60px", cursor: MAC.cursor }}
-            />
-          )}
-
-          {/* Divider */}
-          <div style={styles.toolbarDivider} />
-
-          {/* Delete */}
-          <button onClick={deleteSelected} style={styles.btn}>
-            ✕ Delete
-          </button>
-
-          {/* Undo */}
-          <button onClick={handleUndo} style={styles.btn}>
-            ↩ Undo
-          </button>
-
-          {/* Divider */}
-          <div style={styles.toolbarDivider} />
-
-          {/* Save / Send */}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              ...styles.btnPrimary,
-              ...(saving ? { opacity: 0.6 } : {}),
-            }}
-          >
-            {saving
-              ? "Saving..."
-              : isCollaborative
-              ? "💾 Save & Share"
-              : "💣 Send Lovebomb"}
-          </button>
+        {/* ─── Status Bar ─── */}
+        <div style={styles.statusBar}>
+          <span>{objectCount} items</span>
+          <span>|</span>
+          <span>{diskMB} MB in disk</span>
+          <span>|</span>
+          <span>888 MB available</span>
         </div>
       </div>
 
-      {/* ─── Share Popup (Mac OS 9 Alert Dialog) ─── */}
+      {/* ─── Bottom Toolbar (floating on clouds bg) ─── */}
+      <div style={styles.toolbar}>
+        {/* Pointer tool */}
+        <button
+          onClick={() => setActiveTool("pointer")}
+          style={activeTool === "pointer" ? styles.btnActive : styles.btn}
+        >
+          Select
+        </button>
+
+        {/* Pencil tool */}
+        <button
+          onClick={() => setActiveTool("pencil")}
+          style={activeTool === "pencil" ? styles.btnActive : styles.btn}
+        >
+          Draw
+        </button>
+
+        {/* Color palette */}
+        {activeTool === "pencil" && (
+          <div style={styles.colorPalette}>
+            {colors.map((color) => (
+              <button
+                key={color}
+                onClick={() => setBrushColor(color)}
+                style={{
+                  ...(brushColor === color
+                    ? styles.colorSwatchActive
+                    : styles.colorSwatch),
+                  backgroundColor: color,
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Brush size slider */}
+        {activeTool === "pencil" && (
+          <input
+            type="range"
+            min={1}
+            max={20}
+            value={brushSize}
+            onChange={(e) => setBrushSize(Number(e.target.value))}
+            style={{ width: "60px", cursor: "pointer" }}
+          />
+        )}
+
+        {/* Divider */}
+        <div style={styles.toolbarDivider} />
+
+        {/* Delete */}
+        <button onClick={deleteSelected} style={styles.btn}>
+          Delete
+        </button>
+
+        {/* Undo */}
+        <button onClick={handleUndo} style={styles.btn}>
+          Undo
+        </button>
+
+        {/* Divider */}
+        <div style={styles.toolbarDivider} />
+
+        {/* Save / Send */}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            ...styles.btnPrimary,
+            ...(saving ? { opacity: 0.6 } : {}),
+          }}
+        >
+          {saving
+            ? "Saving..."
+            : isCollaborative
+            ? "Save & Share"
+            : "Send Lovebomb"}
+        </button>
+      </div>
+
+      {/* ─── Share Popup (Mac Alert Dialog) ─── */}
       {showSharePopup && (
         <div style={styles.overlay}>
           <div style={styles.dialog}>
             {/* Dialog title bar */}
             <div style={styles.titleBar}>
-              <div style={styles.titleBtnGroup}>
-                <div
-                  style={styles.closeBtn}
-                  onClick={() => setShowSharePopup(false)}
-                />
-              </div>
+              <div
+                style={styles.closeBox}
+                onClick={() => setShowSharePopup(false)}
+              />
               <span style={styles.titleText}>Lovebomb Sent</span>
               <span />
             </div>
@@ -1193,19 +1190,19 @@ export default function CanvasEditor({
               <h2
                 style={{
                   margin: 0,
-                  fontSize: "20px",
+                  fontSize: "24px",
                   fontWeight: "bold",
-                  color: "#000000",
-                  fontFamily: "'Caveat', cursive",
+                  color: "#1a1a6e",
+                  fontFamily: "Georgia, serif",
                 }}
               >
-                💣 Lovebomb saved!
+                Lovebomb saved!
               </h2>
               <p
                 style={{
                   margin: 0,
-                  fontSize: "13px",
-                  color: "#333333",
+                  fontSize: "16px",
+                  color: "#000000",
                   fontFamily: MAC.font,
                 }}
               >
@@ -1216,7 +1213,7 @@ export default function CanvasEditor({
                   type="text"
                   value={shareLink}
                   readOnly
-                  style={{ ...styles.input, fontSize: "11px" }}
+                  style={{ ...styles.input, fontSize: "14px" }}
                 />
                 <button onClick={copyLink} style={styles.btn}>
                   Copy

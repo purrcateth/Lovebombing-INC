@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4A90D9"/>
+      <stop offset="40%" stop-color="#6DB3E8"/>
+      <stop offset="70%" stop-color="#87CEEB"/>
+      <stop offset="100%" stop-color="#B0D4F1"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+  <g fill="white" opacity="0.95">
+    <ellipse cx="300" cy="180" rx="200" ry="80"/>
+    <ellipse cx="180" cy="170" rx="140" ry="70"/>
+    <ellipse cx="400" cy="160" rx="160" ry="75"/>
+    <ellipse cx="280" cy="150" rx="100" ry="60"/>
+    <ellipse cx="960" cy="140" rx="240" ry="90"/>
+    <ellipse cx="840" cy="130" rx="160" ry="75"/>
+    <ellipse cx="1080" cy="125" rx="170" ry="80"/>
+    <ellipse cx="940" cy="110" rx="120" ry="65"/>
+    <ellipse cx="1020" cy="115" rx="110" ry="60"/>
+    <ellipse cx="1600" cy="220" rx="200" ry="80"/>
+    <ellipse cx="1500" cy="210" rx="140" ry="70"/>
+    <ellipse cx="1700" cy="205" rx="150" ry="72"/>
+    <ellipse cx="1580" cy="195" rx="110" ry="60"/>
+  </g>
+  <g fill="white" opacity="0.85">
+    <ellipse cx="500" cy="450" rx="220" ry="85"/>
+    <ellipse cx="380" cy="440" rx="150" ry="70"/>
+    <ellipse cx="620" cy="435" rx="160" ry="72"/>
+    <ellipse cx="480" cy="420" rx="120" ry="65"/>
+    <ellipse cx="560" cy="425" rx="110" ry="60"/>
+    <ellipse cx="1350" cy="400" rx="200" ry="80"/>
+    <ellipse cx="1240" cy="390" rx="140" ry="68"/>
+    <ellipse cx="1460" cy="385" rx="150" ry="70"/>
+    <ellipse cx="1330" cy="375" rx="110" ry="60"/>
+    <ellipse cx="150" cy="520" rx="180" ry="75"/>
+    <ellipse cx="60" cy="510" rx="130" ry="65"/>
+    <ellipse cx="250" cy="505" rx="140" ry="68"/>
+  </g>
+  <g fill="white" opacity="0.75">
+    <ellipse cx="800" cy="700" rx="260" ry="95"/>
+    <ellipse cx="660" cy="690" rx="180" ry="80"/>
+    <ellipse cx="940" cy="685" rx="180" ry="82"/>
+    <ellipse cx="770" cy="670" rx="130" ry="70"/>
+    <ellipse cx="860" cy="675" rx="120" ry="65"/>
+    <ellipse cx="1700" cy="680" rx="200" ry="80"/>
+    <ellipse cx="1600" cy="670" rx="140" ry="68"/>
+    <ellipse cx="1800" cy="665" rx="150" ry="70"/>
+    <ellipse cx="350" cy="780" rx="220" ry="85"/>
+    <ellipse cx="230" cy="770" rx="150" ry="72"/>
+    <ellipse cx="470" cy="765" rx="160" ry="75"/>
+    <ellipse cx="330" cy="755" rx="120" ry="65"/>
+  </g>
+  <g fill="white" opacity="0.65">
+    <ellipse cx="1100" cy="900" rx="280" ry="100"/>
+    <ellipse cx="950" cy="890" rx="190" ry="85"/>
+    <ellipse cx="1250" cy="885" rx="190" ry="85"/>
+    <ellipse cx="1070" cy="870" rx="140" ry="72"/>
+    <ellipse cx="1160" cy="875" rx="130" ry="68"/>
+  </g>
+</svg>

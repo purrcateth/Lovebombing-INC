@@ -25,16 +25,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!bomb) return { title: "Lovebomb not found" };
 
   return {
-    title: "You received a Lovebomb! 💣💕",
+    title: "You received a Lovebomb!",
     description: `Open to see what ${bomb.creator_name} made for you`,
     openGraph: {
-      title: "You received a Lovebomb! 💣💕",
+      title: "You received a Lovebomb!",
       description: `Open to see what ${bomb.creator_name} made for you`,
       images: [{ url: `${baseUrl}/api/og/${id}`, width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "You received a Lovebomb! 💣💕",
+      title: "You received a Lovebomb!",
       description: `Open to see what ${bomb.creator_name} made for you`,
       images: [`${baseUrl}/api/og/${id}`],
     },
@@ -47,42 +47,206 @@ export default async function BombPage({ params }: PageProps) {
 
   if (!bomb) {
     return (
-      <main className="flex min-h-screen items-center justify-center px-5 py-10">
-        <section className="lb-card w-full max-w-lg px-8 py-10 text-center">
-          <p className="text-6xl">💔</p>
-          <h1 className="lb-title mt-2 text-6xl text-[#8e2740]">This lovebomb doesn&apos;t exist</h1>
-          <p className="mt-3 text-[#7a4c58]">Try sending a fresh one to someone special.</p>
-          <div className="mt-6">
-            <Link href="/create" className="lb-btn lb-btn-primary inline-flex">
-              Create your own 💌
-            </Link>
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "480px",
+            border: "2px solid #000",
+            background: "#C0C0C0",
+            boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* Title bar */}
+          <div
+            style={{
+              height: "24px",
+              background:
+                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+              borderBottom: "2px solid #000",
+              display: "flex",
+              alignItems: "center",
+              padding: "0 8px",
+            }}
+          >
+            <div
+              style={{
+                width: "12px",
+                height: "12px",
+                border: "1px solid #000",
+                background: "#C0C0C0",
+              }}
+            />
+            <span
+              style={{
+                flex: 1,
+                textAlign: "center",
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                fontWeight: "bold",
+              }}
+            >
+              Error
+            </span>
           </div>
-        </section>
+          <div style={{ padding: "30px 24px", textAlign: "center" }}>
+            <p style={{ fontSize: "48px", margin: 0 }}>&#x26A0;</p>
+            <h1
+              style={{
+                fontFamily: "Georgia, serif",
+                fontWeight: "bold",
+                color: "#1a1a6e",
+                fontSize: "28px",
+                margin: "8px 0 0 0",
+              }}
+            >
+              This lovebomb doesn&apos;t exist
+            </h1>
+            <p
+              style={{
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                color: "#000",
+                marginTop: "8px",
+              }}
+            >
+              Try sending a fresh one to someone special.
+            </p>
+            <div style={{ marginTop: "16px" }}>
+              <Link
+                href="/create"
+                style={{
+                  padding: "6px 20px",
+                  border: "2px outset #DFDFDF",
+                  background: "#C0C0C0",
+                  fontFamily: "'VT323', monospace",
+                  fontSize: "16px",
+                  color: "#000",
+                  textDecoration: "none",
+                  fontWeight: "bold",
+                }}
+              >
+                Create your own
+              </Link>
+            </div>
+          </div>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="px-5 py-10">
-      <section className="lb-card mx-auto w-full max-w-3xl px-5 py-6 sm:px-8">
-        <p className="text-center text-sm uppercase tracking-[0.2em] text-[#b25266]">You received a lovebomb</p>
-        <h1 className="lb-title mt-2 text-center text-5xl text-[#8e2740] sm:text-6xl">
-          A lovebomb from {bomb.creator_name} 💣💕
-        </h1>
+    <main style={{ padding: "20px 20px 40px" }}>
+      {/* Mac Finder Window */}
+      <div
+        style={{
+          maxWidth: "700px",
+          margin: "0 auto",
+          border: "2px solid #000",
+          background: "#C0C0C0",
+          boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+        }}
+      >
+        {/* Pinstriped title bar */}
+        <div
+          style={{
+            height: "24px",
+            background:
+              "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+            borderBottom: "2px solid #000",
+            display: "flex",
+            alignItems: "center",
+            padding: "0 8px",
+          }}
+        >
+          <div
+            style={{
+              width: "12px",
+              height: "12px",
+              border: "1px solid #000",
+              background: "#C0C0C0",
+            }}
+          />
+          <span
+            style={{
+              flex: 1,
+              textAlign: "center",
+              fontFamily: "'VT323', monospace",
+              fontSize: "16px",
+              fontWeight: "bold",
+            }}
+          >
+            A lovebomb from {bomb.creator_name}
+          </span>
+        </div>
 
-        <div className="mt-6">
+        {/* Window body */}
+        <div style={{ padding: "20px" }}>
+          <div style={{ textAlign: "center", marginBottom: "16px" }}>
+            <h1
+              style={{
+                fontFamily: "Georgia, serif",
+                fontWeight: "bold",
+                color: "#1a1a6e",
+                fontSize: "32px",
+                margin: 0,
+              }}
+            >
+              A lovebomb from {bomb.creator_name}
+            </h1>
+          </div>
+
           <BombViewer canvasJson={bomb.canvas_json} layers={bomb.layers || []} />
-        </div>
 
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-          <Link href={`/bomb/${id}/add`} className="lb-btn lb-btn-primary">
-            Add Your Lovebombs ✨
-          </Link>
-          <Link href="/create" className="lb-btn lb-btn-secondary">
-            Create Your Own 💌
-          </Link>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: "10px",
+              marginTop: "16px",
+            }}
+          >
+            <Link
+              href={`/bomb/${id}/add`}
+              style={{
+                padding: "6px 20px",
+                border: "2px outset #DFDFDF",
+                background: "#C0C0C0",
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                color: "#000",
+                textDecoration: "none",
+                fontWeight: "bold",
+              }}
+            >
+              Add Your Lovebombs
+            </Link>
+            <Link
+              href="/create"
+              style={{
+                padding: "6px 20px",
+                border: "2px outset #DFDFDF",
+                background: "#FFFFFF",
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                color: "#000",
+                textDecoration: "none",
+              }}
+            >
+              Create Your Own
+            </Link>
+          </div>
         </div>
-      </section>
+      </div>
     </main>
   );
 }

@@ -2,30 +2,125 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="min-h-screen px-5 py-10">
-      <section className="lb-card mx-auto flex min-h-[86vh] w-full max-w-4xl flex-col items-center justify-center gap-6 px-6 py-12 text-center">
-        <p className="text-sm uppercase tracking-[0.2em] text-[#b25266]">Lovebombing, Inc.</p>
-        <h1 className="lb-title text-6xl leading-[0.95] text-[#8e2740] sm:text-7xl">
-          Lovebombing, INC.
-        </h1>
-        <p className="max-w-2xl text-base text-[#6d4250] sm:text-lg">
-          show love through handmade digital art ✨
-        </p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/create"
-            className="lb-btn lb-btn-primary"
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+      }}
+    >
+      {/* Mac Window */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "520px",
+          border: "2px solid #000000",
+          background: "#C0C0C0",
+          boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+        }}
+      >
+        {/* Pinstriped title bar */}
+        <div
+          style={{
+            height: "24px",
+            background:
+              "repeating-linear-gradient(0deg, #FFFFFF 0px, #FFFFFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+            borderBottom: "2px solid #000000",
+            display: "flex",
+            alignItems: "center",
+            padding: "0 8px",
+            gap: "6px",
+          }}
+        >
+          <div
+            style={{
+              width: "12px",
+              height: "12px",
+              border: "1px solid #000",
+              background: "#C0C0C0",
+            }}
+          />
+          <span
+            style={{
+              flex: 1,
+              textAlign: "center",
+              fontFamily: "'VT323', monospace",
+              fontSize: "16px",
+              fontWeight: "bold",
+            }}
           >
-            Create a Lovebomb 💣
-          </Link>
-          <Link
-            href="/bomb/demo"
-            className="lb-btn lb-btn-secondary"
-          >
-            View Example
-          </Link>
+            Lovebombing, INC.
+          </span>
         </div>
-      </section>
+
+        {/* Window body */}
+        <div style={{ padding: "40px 30px", textAlign: "center" }}>
+          <h1
+            style={{
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontWeight: "bold",
+              color: "#1a1a6e",
+              fontSize: "48px",
+              margin: 0,
+              lineHeight: 1,
+            }}
+          >
+            Lovebombing
+          </h1>
+          <p
+            style={{
+              fontFamily: "'VT323', monospace",
+              fontSize: "16px",
+              color: "#000000",
+              marginTop: "12px",
+            }}
+          >
+            show love through handmade digital art
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "10px",
+              justifyContent: "center",
+              marginTop: "24px",
+            }}
+          >
+            <Link
+              href="/create"
+              style={{
+                padding: "6px 20px",
+                border: "2px outset #DFDFDF",
+                background: "#C0C0C0",
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                color: "#000000",
+                textDecoration: "none",
+                fontWeight: "bold",
+              }}
+            >
+              Create a Lovebomb
+            </Link>
+            <Link
+              href="/bomb/demo"
+              style={{
+                padding: "6px 20px",
+                border: "2px outset #DFDFDF",
+                background: "#FFFFFF",
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                color: "#000000",
+                textDecoration: "none",
+              }}
+            >
+              View Example
+            </Link>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }
