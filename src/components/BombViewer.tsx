@@ -118,11 +118,11 @@ export default function BombViewer({ canvasJson, layers }: BombViewerProps) {
       <div
         style={{
           padding: 0,
-          background: "#AAAAAA",
-          borderRadius: "2px",
+          background: "#fff5ef",
+          borderRadius: "14px",
           boxShadow:
-            "inset 1px 1px 2px rgba(0,0,0,0.25), inset -1px -1px 1px rgba(255,255,255,0.5)",
-          border: "1px solid #555555",
+            "inset 1px 1px 2px rgba(154,56,84,0.2), inset -1px -1px 1px rgba(255,255,255,0.7)",
+          border: "2px solid #f3a7b9",
         }}
       >
         <div

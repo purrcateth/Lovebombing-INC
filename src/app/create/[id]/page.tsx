@@ -28,14 +28,9 @@ export default function CanvasPage() {
 
   if (loading) {
     return (
-      <div className="mac-desktop flex min-h-screen items-center justify-center">
-        <div className="mac-dialog px-8 py-6">
-          <p
-            className="text-lg text-black"
-            style={{ fontFamily: "var(--font-pixel)" }}
-          >
-            Loading your canvas...
-          </p>
+      <div className="flex min-h-screen items-center justify-center px-5">
+        <div className="lb-card px-8 py-6">
+          <p className="text-lg font-medium text-[#7a4150]">Loading your canvas...</p>
         </div>
       </div>
     );

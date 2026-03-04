@@ -16,11 +16,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=EB+Garamond:wght@400;500;600&family=VT323&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          href="https://fonts.cdnfonts.com/css/hikari"
+          href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap"
           rel="stylesheet"
         />
       </head>

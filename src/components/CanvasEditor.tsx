@@ -40,23 +40,23 @@ const objectHasAnimation = (obj: fabric.FabricObject) => {
 
 // ─── Mac OS 9 Platinum Inline Styles ───────────────────────────────────
 const MAC = {
-  bg: "#DDDDDD",
-  bgDark: "#BBBBBB",
-  bgLight: "#EEEEEE",
-  border: "#888888",
-  borderDark: "#555555",
+  bg: "#fff2ec",
+  bgDark: "#ffc7b2",
+  bgLight: "#fff9f4",
+  border: "#f3a7b9",
+  borderDark: "#d1738a",
   borderLight: "#FFFFFF",
-  titleGradient: "linear-gradient(180deg, #CCCCCC 0%, #AAAAAA 100%)",
+  titleGradient: "linear-gradient(180deg, #ffdce5 0%, #ffc8d5 100%)",
   inset:
-    "inset 1px 1px 2px rgba(0,0,0,0.25), inset -1px -1px 1px rgba(255,255,255,0.5)",
+    "inset 1px 1px 2px rgba(154,56,84,0.2), inset -1px -1px 1px rgba(255,255,255,0.7)",
   outset:
-    "1px 1px 0px rgba(0,0,0,0.15), inset 1px 1px 0px rgba(255,255,255,0.6), inset -1px -1px 0px rgba(0,0,0,0.1)",
+    "1px 1px 0px rgba(154,56,84,0.15), inset 1px 1px 0px rgba(255,255,255,0.7), inset -1px -1px 0px rgba(154,56,84,0.12)",
   btnOutset:
-    "inset 1px 1px 0px rgba(255,255,255,0.7), inset -1px -1px 0px rgba(0,0,0,0.2), 1px 1px 1px rgba(0,0,0,0.15)",
+    "inset 1px 1px 0px rgba(255,255,255,0.9), inset -1px -1px 0px rgba(154,56,84,0.25), 1px 1px 1px rgba(154,56,84,0.15)",
   btnActive:
-    "inset 1px 1px 2px rgba(0,0,0,0.3), inset -1px -1px 1px rgba(255,255,255,0.3)",
-  font: "'HIKARI', 'VT323', 'Chicago', 'Charcoal', sans-serif",
-  fontSize: "16px",
+    "inset 1px 1px 2px rgba(154,56,84,0.3), inset -1px -1px 1px rgba(255,255,255,0.4)",
+  font: "'DM Sans', sans-serif",
+  fontSize: "14px",
   cursor: "url(/cursors/hand.svg) 6 0, pointer",
 };
 
@@ -95,24 +95,24 @@ const styles = {
     width: "12px",
     height: "12px",
     borderRadius: "50%",
-    background: "#FF5F56",
-    border: `1px solid #E0443E`,
+    background: "#ff9db2",
+    border: `1px solid #d86f87`,
     cursor: MAC.cursor,
   },
   minimizeBtn: {
     width: "12px",
     height: "12px",
     borderRadius: "50%",
-    background: "#FFBD2E",
-    border: `1px solid #DEA123`,
+    background: "#ffd59b",
+    border: `1px solid #d4a86d`,
     cursor: MAC.cursor,
   },
   zoomBtn: {
     width: "12px",
     height: "12px",
     borderRadius: "50%",
-    background: "#27C93F",
-    border: `1px solid #1DAD2B`,
+    background: "#bdeca9",
+    border: `1px solid #88be72`,
     cursor: MAC.cursor,
   },
   titleText: {
@@ -164,10 +164,10 @@ const styles = {
     padding: "3px 16px",
     fontSize: "12px",
     fontFamily: MAC.font,
-    background: "#000000",
-    border: `1px solid #000000`,
-    borderRadius: "4px",
-    boxShadow: "2px 2px 4px rgba(0,0,0,0.3)",
+    background: "linear-gradient(135deg, #ff6b6b, #ff8ea1)",
+    border: `1px solid #ff6b6b`,
+    borderRadius: "999px",
+    boxShadow: "0 8px 16px rgba(255,107,107,0.35)",
     cursor: MAC.cursor,
     color: "#FFFFFF",
     fontWeight: "bold" as const,
@@ -230,7 +230,7 @@ const styles = {
     background: "#FFFFFF",
     padding: "3px",
     cursor: "grab",
-    borderRadius: "2px",
+    borderRadius: "8px",
   },
   // ─── Canvas Area ──────────────────
   canvasArea: {
@@ -251,7 +251,7 @@ const styles = {
     background: "#FFFFFF",
     borderRadius: "2px",
     boxShadow: MAC.inset,
-    border: `1px solid ${MAC.borderDark}`,
+    border: `1px solid ${MAC.border}`,
   },
   // ─── Toolbar ──────────────────
   toolbar: {
@@ -309,8 +309,8 @@ const styles = {
   dialog: {
     background: MAC.bg,
     border: `2px solid ${MAC.borderDark}`,
-    borderRadius: "6px",
-    boxShadow: "4px 4px 12px rgba(0,0,0,0.35)",
+    borderRadius: "20px",
+    boxShadow: "0 20px 30px rgba(184, 77, 97, 0.2)",
     width: "100%",
     maxWidth: "420px",
     overflow: "hidden",
@@ -1196,7 +1196,7 @@ export default function CanvasEditor({
                   fontSize: "20px",
                   fontWeight: "bold",
                   color: "#000000",
-                  fontFamily: "'EB Garamond', serif",
+                  fontFamily: "'Caveat', cursive",
                 }}
               >
                 💣 Lovebomb saved!

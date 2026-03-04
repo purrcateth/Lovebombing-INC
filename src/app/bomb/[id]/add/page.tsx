@@ -1,62 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import CanvasEditor from "@/components/CanvasEditor";
-
-const FONT = "'HIKARI', 'VT323', sans-serif";
-const CURSOR = "url(/cursors/hand.svg) 6 0, pointer";
-
-const cardStyle: React.CSSProperties = {
-  background: "#F0EFF5",
-  border: "1px solid #A0A0A0",
-  boxShadow: "2px 2px 0px rgba(0,0,0,0.15), inset 0 0 0 1px #FFFFFF",
-  padding: "48px 56px 40px",
-  position: "relative",
-  maxWidth: "520px",
-  width: "100%",
-};
-
-const bgStyle: React.CSSProperties = {
-  backgroundColor: "#FF00FF",
-  minHeight: "100vh",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "16px",
-  cursor: "url(/cursors/hand.svg) 6 0, default",
-};
-
-const labelStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "12px",
-  left: "16px",
-  fontFamily: FONT,
-  fontSize: "14px",
-  color: "#000000",
-  textTransform: "uppercase",
-  letterSpacing: "0.5px",
-};
-
-const titleStyle: React.CSSProperties = {
-  fontFamily: "'UnifrakturMaguntia', 'Old English Text MT', fantasy",
-  fontWeight: 400,
-  color: "#000060",
-  fontSize: "44px",
-  lineHeight: 1.1,
-  textAlign: "center",
-  marginBottom: "16px",
-  marginTop: "0",
-};
-
-const subtitleStyle: React.CSSProperties = {
-  fontFamily: FONT,
-  fontSize: "16px",
-  color: "#000000",
-  textAlign: "center",
-  marginBottom: "40px",
-  marginTop: "0",
-};
 
 export default function AddToBombPage() {
   const params = useParams();
@@ -92,130 +39,57 @@ export default function AddToBombPage() {
 
   if (loading) {
     return (
-      <div style={bgStyle}>
-        <div style={cardStyle}>
-          <p style={{ fontFamily: FONT, fontSize: "16px", textAlign: "center", color: "#000" }}>
-            Loading...
-          </p>
+      <main className="flex min-h-screen items-center justify-center px-5 py-10">
+        <div className="lb-card px-8 py-6">
+          <p className="text-lg font-medium text-[#7a4150]">Loading...</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (notFound) {
     return (
-      <div style={bgStyle}>
-        <div style={cardStyle}>
-          <span style={labelStyle}>ERROR</span>
-          <h1 style={{ ...titleStyle, fontSize: "48px" }}>Not Found</h1>
-          <p style={subtitleStyle}>This lovebomb could not be found.</p>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <a
-              href="/create"
-              style={{
-                background: "#E8E8E8",
-                border: "2px solid #000000",
-                borderRadius: "4px",
-                padding: "6px 32px",
-                fontFamily: FONT,
-                fontSize: "16px",
-                fontWeight: "bold",
-                color: "#000000",
-                cursor: CURSOR,
-                boxShadow: "inset 1px 1px 0px #FFFFFF, inset -1px -1px 0px #A0A0A0",
-                textTransform: "uppercase",
-                letterSpacing: "1px",
-                textDecoration: "none",
-              }}
-            >
-              CREATE YOUR OWN
-            </a>
+      <main className="flex min-h-screen items-center justify-center px-5 py-10">
+        <div className="lb-card w-full max-w-lg px-8 py-10 text-center">
+          <p className="text-6xl">💔</p>
+          <h1 className="lb-title mt-2 text-6xl text-[#8e2740]">This lovebomb doesn&apos;t exist</h1>
+          <div className="mt-6">
+            <Link href="/create" className="lb-btn lb-btn-primary inline-flex">
+              Create Your Own 💌
+            </Link>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (!nameSubmitted) {
     return (
-      <main style={bgStyle}>
-        <div style={cardStyle}>
-          <span style={labelStyle}>LOGIN</span>
-
-          <h1 style={titleStyle}>Lovebombing, INC.</h1>
-
-          <p style={subtitleStyle}>
-            Bomb your loved ones. Or your haters.
-          </p>
+      <main className="flex min-h-screen items-center justify-center px-5 py-10">
+        <div className="lb-card w-full max-w-xl px-7 py-10 text-center sm:px-12">
+          <p className="text-sm uppercase tracking-[0.2em] text-[#b25266]">Collaborative mode</p>
+          <h1 className="lb-title mt-2 text-6xl leading-none text-[#8e2740] sm:text-7xl">Add Your Lovebombs ✨</h1>
+          <p className="mt-3 text-sm text-[#8a5563]">What&apos;s your name?</p>
 
           <form
+            className="mt-7 space-y-4 text-left"
             onSubmit={(e) => {
               e.preventDefault();
               if (name.trim()) setNameSubmitted(true);
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                justifyContent: "center",
-                marginBottom: "28px",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: FONT,
-                  fontSize: "16px",
-                  color: "#000000",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Name:
-              </span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={30}
-                autoFocus
-                style={{
-                  background: "#FFFFFF",
-                  border: "1px solid #000000",
-                  borderBottom: "2px solid #000000",
-                  padding: "4px 8px",
-                  fontFamily: FONT,
-                  fontSize: "16px",
-                  color: "#000000",
-                  outline: "none",
-                  width: "240px",
-                }}
-              />
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "center" }}>
-              <button
-                type="submit"
-                disabled={!name.trim()}
-                style={{
-                  background: "#E8E8E8",
-                  border: "2px solid #000000",
-                  borderRadius: "4px",
-                  padding: "6px 32px",
-                  fontFamily: FONT,
-                  fontSize: "16px",
-                  fontWeight: "bold",
-                  color: "#000000",
-                  cursor: !name.trim() ? "default" : CURSOR,
-                  boxShadow: "inset 1px 1px 0px #FFFFFF, inset -1px -1px 0px #A0A0A0",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                  opacity: !name.trim() ? 0.4 : 1,
-                }}
-              >
-                ENTER
-              </button>
-            </div>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={30}
+              autoFocus
+              className="w-full rounded-2xl border border-[#ffc4d0] bg-white px-4 py-3 outline-none focus:border-[#ff90a6]"
+              placeholder="Type your name"
+            />
+            <button type="submit" disabled={!name.trim()} className="lb-btn lb-btn-primary w-full disabled:opacity-50">
+              Let&apos;s go
+            </button>
           </form>
         </div>
       </main>
