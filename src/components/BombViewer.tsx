@@ -9,10 +9,26 @@ interface BombViewerProps {
 }
 
 const CANVAS_SIZE = 1080;
+const ANIMATED_KEY = "_isAnimatedSticker";
+
+const isGifSource = (src?: string) => Boolean(src && /(^data:image\/gif|\.gif($|\?))/i.test(src));
+
+const objectHasAnimation = (obj: fabric.FabricObject) => {
+  const candidate = obj as fabric.FabricImage & {
+    getSrc?: () => string;
+    [ANIMATED_KEY]?: boolean;
+  };
+  if (candidate[ANIMATED_KEY]) return true;
+  if (typeof candidate.getSrc === "function") {
+    return isGifSource(candidate.getSrc());
+  }
+  return false;
+};
 
 export default function BombViewer({ canvasJson, layers }: BombViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
@@ -23,6 +39,27 @@ export default function BombViewer({ canvasJson, layers }: BombViewerProps) {
       height: CANVAS_SIZE,
       backgroundColor: "#ffffff",
     });
+
+    const stopAnimationLoop = () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+
+    const startAnimationLoopIfNeeded = () => {
+      const hasAnimated = canvas.getObjects().some((obj) => objectHasAnimation(obj));
+      if (!hasAnimated) {
+        stopAnimationLoop();
+        return;
+      }
+      if (animationFrameRef.current !== null) return;
+      const tick = () => {
+        canvas.requestRenderAll();
+        animationFrameRef.current = requestAnimationFrame(tick);
+      };
+      animationFrameRef.current = requestAnimationFrame(tick);
+    };
 
     const loadCanvas = async () => {
       await canvas.loadFromJSON(canvasJson);
@@ -46,6 +83,7 @@ export default function BombViewer({ canvasJson, layers }: BombViewerProps) {
       }
 
       canvas.renderAll();
+      startAnimationLoopIfNeeded();
     };
 
     loadCanvas();
@@ -63,6 +101,7 @@ export default function BombViewer({ canvasJson, layers }: BombViewerProps) {
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      stopAnimationLoop();
       canvas.dispose();
     };
   }, [canvasJson, layers]);

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as fabric from "fabric";
 import { stickerCategories } from "@/lib/stickers";
+import type { StickerCategory } from "@/lib/types";
 
 interface CanvasEditorProps {
   bombId: string;
@@ -21,6 +22,21 @@ const CANVAS_SIZE = 1080;
 
 // Custom property to mark locked background objects
 const LOCKED_KEY = "_isLockedBackground";
+const ANIMATED_KEY = "_isAnimatedSticker";
+
+const isGifSource = (src?: string) => Boolean(src && /(^data:image\/gif|\.gif($|\?))/i.test(src));
+
+const objectHasAnimation = (obj: fabric.FabricObject) => {
+  const candidate = obj as fabric.FabricImage & {
+    getSrc?: () => string;
+    [ANIMATED_KEY]?: boolean;
+  };
+  if (candidate[ANIMATED_KEY]) return true;
+  if (typeof candidate.getSrc === "function") {
+    return isGifSource(candidate.getSrc());
+  }
+  return false;
+};
 
 // ─── Mac OS 9 Platinum Inline Styles ───────────────────────────────────
 const MAC = {
@@ -366,18 +382,70 @@ export default function CanvasEditor({
   const [shareLink, setShareLink] = useState("");
   const [saving, setSaving] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [stickers, setStickers] = useState<StickerCategory[]>(stickerCategories);
   const [objectCount, setObjectCount] = useState(0);
   const [history, setHistory] = useState<string[]>([]);
   const [scale, setScale] = useState(1);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [dragOverCanvas, setDragOverCanvas] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const animationFrameRef = useRef<number | null>(null);
+
+  const stopAnimationLoop = useCallback(() => {
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }, []);
+
+  const syncAnimationLoop = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) {
+      stopAnimationLoop();
+      return;
+    }
+
+    const hasAnimated = canvas.getObjects().some((obj) => objectHasAnimation(obj));
+
+    if (hasAnimated && animationFrameRef.current === null) {
+      const tick = () => {
+        if (!fabricRef.current) {
+          stopAnimationLoop();
+          return;
+        }
+        fabricRef.current.requestRenderAll();
+        animationFrameRef.current = requestAnimationFrame(tick);
+      };
+      animationFrameRef.current = requestAnimationFrame(tick);
+    }
+
+    if (!hasAnimated) {
+      stopAnimationLoop();
+    }
+  }, [stopAnimationLoop]);
 
   useEffect(() => {
     const check = () => setIsDesktop(window.innerWidth >= 1024);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
+  }, []);
+
+  useEffect(() => {
+    const loadStickers = async () => {
+      try {
+        const response = await fetch("/api/stickers");
+        if (!response.ok) return;
+        const payload = (await response.json()) as { categories?: StickerCategory[] };
+        if (payload.categories && payload.categories.length > 0) {
+          setStickers(payload.categories);
+        }
+      } catch {
+        // keep fallback library if API fails
+      }
+    };
+
+    loadStickers();
   }, []);
 
   const updateObjectCount = useCallback(() => {
@@ -423,8 +491,12 @@ export default function CanvasEditor({
     canvas.on("object:added", () => {
       updateObjectCount();
       setHistory((prev) => [...prev, JSON.stringify(canvas.toJSON())]);
+      syncAnimationLoop();
     });
-    canvas.on("object:removed", updateObjectCount);
+    canvas.on("object:removed", () => {
+      updateObjectCount();
+      syncAnimationLoop();
+    });
 
     const initCanvas = async () => {
       if (isCollaborative && backgroundCanvasJson) {
@@ -467,6 +539,8 @@ export default function CanvasEditor({
         canvas.renderAll();
         updateObjectCount();
       }
+
+      syncAnimationLoop();
     };
 
     initCanvas();
@@ -562,6 +636,7 @@ export default function CanvasEditor({
       targetEl.removeEventListener("touchstart", handleTouchStart);
       targetEl.removeEventListener("touchmove", handleTouchMove);
       targetEl.removeEventListener("touchend", handleTouchEnd);
+      stopAnimationLoop();
       canvas.dispose();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -602,6 +677,7 @@ export default function CanvasEditor({
       const top = canvasY !== undefined ? canvasY - (targetSize / 2) : CANVAS_SIZE / 2 - (targetSize / 2);
 
       img.set({ scaleX: s, scaleY: s, left, top });
+      (img as fabric.FabricImage & Record<string, boolean>)[ANIMATED_KEY] = isGifSource(src);
       canvas.add(img);
       canvas.setActiveObject(img);
       canvas.renderAll();
@@ -676,6 +752,7 @@ export default function CanvasEditor({
           left: CANVAS_SIZE / 2 - ((img.width || 0) * s) / 2,
           top: CANVAS_SIZE / 2 - ((img.height || 0) * s) / 2,
         });
+        (img as fabric.FabricImage & Record<string, boolean>)[ANIMATED_KEY] = file.type === "image/gif";
         canvas.add(img);
         canvas.setActiveObject(img);
         canvas.renderAll();
@@ -898,7 +975,7 @@ export default function CanvasEditor({
           </label>
 
           {/* Sticker categories */}
-          {stickerCategories.map((category) => (
+          {stickers.map((category) => (
             <div key={category.name} style={{ marginBottom: "10px" }}>
               <h3
                 style={{
