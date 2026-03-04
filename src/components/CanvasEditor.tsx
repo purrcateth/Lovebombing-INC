@@ -14,7 +14,7 @@ interface CanvasEditorProps {
   backgroundLayers?: object[];
 }
 
-type ToolType = "pointer" | "pencil";
+type ToolType = "pointer" | "pencil" | "eraser";
 
 const MAX_OBJECTS = 100;
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB
@@ -654,13 +654,13 @@ export default function CanvasEditor({
 
   useEffect(() => {
     if (!fabricRef.current?.freeDrawingBrush) return;
-    fabricRef.current.freeDrawingBrush.color = brushColor;
+    fabricRef.current.freeDrawingBrush.color = activeTool === "eraser" ? "#FFFFFF" : brushColor;
     fabricRef.current.freeDrawingBrush.width = brushSize;
-  }, [brushColor, brushSize]);
+  }, [activeTool, brushColor, brushSize]);
 
   useEffect(() => {
     if (!fabricRef.current) return;
-    fabricRef.current.isDrawingMode = activeTool === "pencil";
+    fabricRef.current.isDrawingMode = activeTool === "pencil" || activeTool === "eraser";
     if (activeTool === "pointer") {
       fabricRef.current.selection = true;
     }
@@ -817,6 +817,22 @@ export default function CanvasEditor({
       });
     }
     setHistory(newHistory);
+    updateObjectCount();
+  };
+
+  const clearCanvas = () => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const allObjects = canvas.getObjects();
+    const userObjects = allObjects.filter(
+      (obj) => !(obj as fabric.FabricObject & Record<string, boolean>)[LOCKED_KEY]
+    );
+    if (userObjects.length === 0) return;
+    const ok = window.confirm("Clean page? This removes all objects and drawings.");
+    if (!ok) return;
+    userObjects.forEach((obj) => canvas.remove(obj));
+    canvas.discardActiveObject();
+    canvas.renderAll();
     updateObjectCount();
   };
 
@@ -1126,18 +1142,26 @@ export default function CanvasEditor({
           </button>
 
           {/* Pencil tool */}
-          <button
-            onClick={() => setActiveTool("pencil")}
-            style={activeTool === "pencil" ? styles.btnActive : styles.btn}
-          >
-            Draw
-          </button>
+        <button
+          onClick={() => setActiveTool("pencil")}
+          style={activeTool === "pencil" ? styles.btnActive : styles.btn}
+        >
+          Draw
+        </button>
+
+        {/* Eraser tool */}
+        <button
+          onClick={() => setActiveTool("eraser")}
+          style={activeTool === "eraser" ? styles.btnActive : styles.btn}
+        >
+          Eraser
+        </button>
 
           {/* Color palette */}
-          {activeTool === "pencil" && (
-            <div style={styles.colorPalette}>
-              {colors.map((color) => (
-                <button
+        {activeTool === "pencil" && (
+          <div style={styles.colorPalette}>
+            {colors.map((color) => (
+              <button
                   key={color}
                   onClick={() => setBrushColor(color)}
                   style={{
@@ -1152,10 +1176,10 @@ export default function CanvasEditor({
           )}
 
           {/* Brush size slider */}
-          {activeTool === "pencil" && (
-            <input
-              type="range"
-              min={1}
+        {(activeTool === "pencil" || activeTool === "eraser") && (
+          <input
+            type="range"
+            min={1}
               max={20}
               value={brushSize}
               onChange={(e) => setBrushSize(Number(e.target.value))}
@@ -1172,9 +1196,14 @@ export default function CanvasEditor({
           </button>
 
           {/* Undo */}
-          <button onClick={handleUndo} style={styles.btn}>
-            Undo
-          </button>
+        <button onClick={handleUndo} style={styles.btn}>
+          Undo
+        </button>
+
+        {/* Clean page */}
+        <button onClick={clearCanvas} style={styles.btn}>
+          Clean Page
+        </button>
 
           {/* Divider */}
           <div style={styles.toolbarDivider} />
