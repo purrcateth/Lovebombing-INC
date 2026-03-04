@@ -72,6 +72,8 @@ const styles = {
   },
   rootDesktop: {
     flexDirection: "row" as const,
+    gap: "12px",
+    padding: "0 8px 8px 8px",
   },
   // ─── Title Bar ──────────────────
   titleBar: {
@@ -112,7 +114,7 @@ const styles = {
   statusBar: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     height: "20px",
     padding: "0 8px",
     background: MAC.bg,
@@ -122,7 +124,7 @@ const styles = {
     color: "#000000",
     userSelect: "none" as const,
     flexShrink: 0,
-    gap: "12px",
+    gap: "8px",
   },
   // ─── Mac Button ──────────────────
   btn: {
@@ -175,7 +177,7 @@ const styles = {
   },
   sidebarDesktop: {
     width: "220px",
-    height: "100vh",
+    height: "100%",
     boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
   },
   sidebarMobile: {
@@ -235,6 +237,14 @@ const styles = {
     background: MAC.bg,
     boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
   },
+  mainPanel: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: "6px",
+  },
   canvasSunken: {
     flex: 1,
     display: "flex",
@@ -252,10 +262,12 @@ const styles = {
     display: "flex",
     flexWrap: "wrap" as const,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     gap: "5px",
-    padding: "6px 10px",
-    background: "transparent",
+    padding: "8px 12px",
+    background: "#a8c9e3",
+    border: `1px solid ${MAC.borderDark}`,
+    boxShadow: "2px 2px 0px rgba(0,0,0,0.35)",
     flexShrink: 0,
   },
   toolbarDivider: {
@@ -532,6 +544,12 @@ export default function CanvasEditor({
         updateObjectCount();
       }
 
+      for (const obj of canvas.getObjects()) {
+        if (objectHasAnimation(obj)) {
+          obj.set({ objectCaching: false });
+        }
+      }
+
       syncAnimationLoop();
     };
 
@@ -669,7 +687,11 @@ export default function CanvasEditor({
       const top = canvasY !== undefined ? canvasY - (targetSize / 2) : CANVAS_SIZE / 2 - (targetSize / 2);
 
       img.set({ scaleX: s, scaleY: s, left, top });
-      (img as fabric.FabricImage & Record<string, boolean>)[ANIMATED_KEY] = isGifSource(src);
+      const isAnimated = isGifSource(src);
+      (img as fabric.FabricImage & Record<string, boolean>)[ANIMATED_KEY] = isAnimated;
+      if (isAnimated) {
+        img.set({ objectCaching: false });
+      }
       canvas.add(img);
       canvas.setActiveObject(img);
       canvas.renderAll();
@@ -744,7 +766,11 @@ export default function CanvasEditor({
           left: CANVAS_SIZE / 2 - ((img.width || 0) * s) / 2,
           top: CANVAS_SIZE / 2 - ((img.height || 0) * s) / 2,
         });
-        (img as fabric.FabricImage & Record<string, boolean>)[ANIMATED_KEY] = file.type === "image/gif";
+        const isAnimated = file.type === "image/gif";
+        (img as fabric.FabricImage & Record<string, boolean>)[ANIMATED_KEY] = isAnimated;
+        if (isAnimated) {
+          img.set({ objectCaching: false });
+        }
         canvas.add(img);
         canvas.setActiveObject(img);
         canvas.renderAll();
@@ -1022,8 +1048,9 @@ export default function CanvasEditor({
         </div>
       </div>
 
-      {/* ─── Main Canvas Area (Mac Finder Window) ─── */}
-      <div style={styles.canvasArea}>
+      <div style={styles.mainPanel}>
+        {/* ─── Main Canvas Area (Mac Finder Window) ─── */}
+        <div style={styles.canvasArea}>
         {/* Pinstriped window title bar */}
         <div style={styles.titleBar}>
           <div style={styles.closeBox} />
@@ -1083,92 +1110,91 @@ export default function CanvasEditor({
         {/* ─── Status Bar ─── */}
         <div style={styles.statusBar}>
           <span>{objectCount} items</span>
-          <span>|</span>
           <span>{diskMB} MB in disk</span>
-          <span>|</span>
           <span>888 MB available</span>
         </div>
-      </div>
+        </div>
 
-      {/* ─── Bottom Toolbar (floating on clouds bg) ─── */}
-      <div style={styles.toolbar}>
-        {/* Pointer tool */}
-        <button
-          onClick={() => setActiveTool("pointer")}
-          style={activeTool === "pointer" ? styles.btnActive : styles.btn}
-        >
-          Select
-        </button>
+        {/* ─── Bottom Toolbar (now directly under canvas) ─── */}
+        <div style={styles.toolbar}>
+          {/* Pointer tool */}
+          <button
+            onClick={() => setActiveTool("pointer")}
+            style={activeTool === "pointer" ? styles.btnActive : styles.btn}
+          >
+            Select
+          </button>
 
-        {/* Pencil tool */}
-        <button
-          onClick={() => setActiveTool("pencil")}
-          style={activeTool === "pencil" ? styles.btnActive : styles.btn}
-        >
-          Draw
-        </button>
+          {/* Pencil tool */}
+          <button
+            onClick={() => setActiveTool("pencil")}
+            style={activeTool === "pencil" ? styles.btnActive : styles.btn}
+          >
+            Draw
+          </button>
 
-        {/* Color palette */}
-        {activeTool === "pencil" && (
-          <div style={styles.colorPalette}>
-            {colors.map((color) => (
-              <button
-                key={color}
-                onClick={() => setBrushColor(color)}
-                style={{
-                  ...(brushColor === color
-                    ? styles.colorSwatchActive
-                    : styles.colorSwatch),
-                  backgroundColor: color,
-                }}
-              />
-            ))}
-          </div>
-        )}
+          {/* Color palette */}
+          {activeTool === "pencil" && (
+            <div style={styles.colorPalette}>
+              {colors.map((color) => (
+                <button
+                  key={color}
+                  onClick={() => setBrushColor(color)}
+                  style={{
+                    ...(brushColor === color
+                      ? styles.colorSwatchActive
+                      : styles.colorSwatch),
+                    backgroundColor: color,
+                  }}
+                />
+              ))}
+            </div>
+          )}
 
-        {/* Brush size slider */}
-        {activeTool === "pencil" && (
-          <input
-            type="range"
-            min={1}
-            max={20}
-            value={brushSize}
-            onChange={(e) => setBrushSize(Number(e.target.value))}
-            style={{ width: "60px", cursor: "pointer" }}
-          />
-        )}
+          {/* Brush size slider */}
+          {activeTool === "pencil" && (
+            <input
+              type="range"
+              min={1}
+              max={20}
+              value={brushSize}
+              onChange={(e) => setBrushSize(Number(e.target.value))}
+              style={{ width: "60px", cursor: "pointer" }}
+            />
+          )}
 
-        {/* Divider */}
-        <div style={styles.toolbarDivider} />
+          {/* Divider */}
+          <div style={styles.toolbarDivider} />
 
-        {/* Delete */}
-        <button onClick={deleteSelected} style={styles.btn}>
-          Delete
-        </button>
+          {/* Delete */}
+          <button onClick={deleteSelected} style={styles.btn}>
+            Delete
+          </button>
 
-        {/* Undo */}
-        <button onClick={handleUndo} style={styles.btn}>
-          Undo
-        </button>
+          {/* Undo */}
+          <button onClick={handleUndo} style={styles.btn}>
+            Undo
+          </button>
 
-        {/* Divider */}
-        <div style={styles.toolbarDivider} />
+          {/* Divider */}
+          <div style={styles.toolbarDivider} />
 
-        {/* Save / Send */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            ...styles.btnPrimary,
-            ...(saving ? { opacity: 0.6 } : {}),
-          }}
-        >
-          {saving
-            ? "Saving..."
-            : isCollaborative
-            ? "Save & Share"
-            : "Send Lovebomb"}
-        </button>
+          {/* Save / Send */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              ...styles.btnPrimary,
+              ...(saving ? { opacity: 0.6 } : {}),
+            }}
+          >
+            {saving
+              ? "Saving..."
+              : isCollaborative
+              ? "Save & Share"
+              : "Send Lovebomb"}
+          </button>
+        </div>
       </div>
 
       {/* ─── Share Popup (Mac Alert Dialog) ─── */}

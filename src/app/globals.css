@@ -19,7 +19,6 @@ body {
   font-family: "VT323", "Geneva", "Chicago", monospace;
   font-size: 16px;
   background:
-    url("/backgrounds/clouds.png") center center / cover fixed no-repeat,
     url("/backgrounds/clouds.svg") center center / cover fixed no-repeat,
     linear-gradient(180deg, #4a90d9 0%, #87ceeb 40%, #b0d4f1 100%);
 }

@@ -82,6 +82,12 @@ export default function BombViewer({ canvasJson, layers }: BombViewerProps) {
         }
       }
 
+      for (const obj of canvas.getObjects()) {
+        if (objectHasAnimation(obj)) {
+          obj.set({ objectCaching: false });
+        }
+      }
+
       canvas.renderAll();
       startAnimationLoopIfNeeded();
     };
