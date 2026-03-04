@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <radialGradient id="cookieGrad" cx="45%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#FFCC80"/>
+      <stop offset="50%" stop-color="#E6A24A"/>
+      <stop offset="100%" stop-color="#D4943A"/>
+    </radialGradient>
+    <filter id="cookieShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#8D6E63" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <!-- Cookie body (slightly irregular circle) -->
+  <path d="M100 20 Q140 18, 165 40 Q185 62, 182 100 Q180 138, 160 160 Q138 182, 100 180 Q62 182, 40 160 Q18 138, 20 100 Q22 62, 40 40 Q62 18, 100 20Z" fill="url(#cookieGrad)" filter="url(#cookieShadow)"/>
+  <!-- Chocolate chips -->
+  <ellipse cx="70" cy="60" rx="9" ry="8" fill="#4E342E" transform="rotate(-10 70 60)"/>
+  <ellipse cx="130" cy="55" rx="8" ry="9" fill="#4E342E" transform="rotate(15 130 55)"/>
+  <ellipse cx="55" cy="110" rx="9" ry="7" fill="#4E342E" transform="rotate(5 55 110)"/>
+  <ellipse cx="140" cy="120" rx="8" ry="9" fill="#4E342E" transform="rotate(-8 140 120)"/>
+  <ellipse cx="90" cy="150" rx="9" ry="7" fill="#4E342E" transform="rotate(20 90 150)"/>
+  <ellipse cx="120" cy="155" rx="7" ry="8" fill="#4E342E" transform="rotate(-15 120 155)"/>
+  <!-- Chip highlights -->
+  <ellipse cx="68" cy="57" rx="3" ry="2.5" fill="#6D4C41" opacity="0.5"/>
+  <ellipse cx="128" cy="52" rx="2.5" ry="3" fill="#6D4C41" opacity="0.5"/>
+  <!-- Cute face -->
+  <circle cx="82" cy="100" r="5" fill="#3E2723"/>
+  <circle cx="118" cy="100" r="5" fill="#3E2723"/>
+  <circle cx="85" cy="97" r="2" fill="white"/>
+  <circle cx="121" cy="97" r="2" fill="white"/>
+  <path d="M88 118 Q100 130, 112 118" fill="none" stroke="#3E2723" stroke-width="3" stroke-linecap="round"/>
+  <!-- Cheeks -->
+  <circle cx="68" cy="112" r="8" fill="#FFAB91" opacity="0.4"/>
+  <circle cx="132" cy="112" r="8" fill="#FFAB91" opacity="0.4"/>
+</svg>

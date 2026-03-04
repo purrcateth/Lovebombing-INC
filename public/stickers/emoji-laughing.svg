@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <radialGradient id="laughGrad" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#FFEE58"/>
+      <stop offset="100%" stop-color="#FDD835"/>
+    </radialGradient>
+    <filter id="laughShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#F9A825" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Face -->
+  <circle cx="100" cy="100" r="80" fill="url(#laughGrad)" filter="url(#laughShadow)"/>
+  <!-- Closed happy eyes -->
+  <path d="M55 82 Q72 68, 90 82" fill="none" stroke="#5D4037" stroke-width="4" stroke-linecap="round"/>
+  <path d="M110 82 Q128 68, 146 82" fill="none" stroke="#5D4037" stroke-width="4" stroke-linecap="round"/>
+  <!-- Open mouth laughing -->
+  <path d="M55 115 Q100 170, 145 115Z" fill="#5D4037" stroke="#5D4037" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Tongue -->
+  <ellipse cx="100" cy="145" rx="18" ry="12" fill="#EF5350"/>
+  <!-- Teeth -->
+  <rect x="65" y="115" width="70" height="14" rx="3" fill="white"/>
+  <!-- Tear drops of joy -->
+  <path d="M42 90 Q38 100, 42 105 Q46 100, 42 90Z" fill="#4FC3F7" opacity="0.7"/>
+  <path d="M158 90 Q154 100, 158 105 Q162 100, 158 90Z" fill="#4FC3F7" opacity="0.7"/>
+  <!-- Cheeks -->
+  <circle cx="48" cy="108" r="12" fill="#FFAB91" opacity="0.4"/>
+  <circle cx="152" cy="108" r="12" fill="#FFAB91" opacity="0.4"/>
+</svg>

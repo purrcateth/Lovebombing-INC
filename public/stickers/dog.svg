@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <radialGradient id="dogGrad" cx="50%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#D7CCC8"/>
+      <stop offset="100%" stop-color="#A1887F"/>
+    </radialGradient>
+    <filter id="dogShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#5D4037" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <!-- Floppy ears -->
+  <ellipse cx="40" cy="95" rx="28" ry="50" fill="#8D6E63" filter="url(#dogShadow)" transform="rotate(-10 40 95)"/>
+  <ellipse cx="160" cy="95" rx="28" ry="50" fill="#8D6E63" transform="rotate(10 160 95)"/>
+  <!-- Face -->
+  <ellipse cx="100" cy="105" rx="60" ry="58" fill="url(#dogGrad)" filter="url(#dogShadow)"/>
+  <!-- Face patch -->
+  <ellipse cx="100" cy="125" rx="35" ry="30" fill="#EFEBE9"/>
+  <!-- Eyes -->
+  <circle cx="78" cy="92" r="9" fill="#3E2723"/>
+  <circle cx="122" cy="92" r="9" fill="#3E2723"/>
+  <!-- Eye shine -->
+  <circle cx="82" cy="89" r="3.5" fill="white"/>
+  <circle cx="126" cy="89" r="3.5" fill="white"/>
+  <!-- Nose -->
+  <ellipse cx="100" cy="112" rx="10" ry="8" fill="#3E2723"/>
+  <ellipse cx="100" cy="110" rx="5" ry="3" fill="#5D4037" opacity="0.5"/>
+  <!-- Mouth -->
+  <path d="M100 120 Q93 130, 87 126" fill="none" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M100 120 Q107 130, 113 126" fill="none" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Tongue -->
+  <ellipse cx="100" cy="133" rx="8" ry="10" fill="#FF8A80"/>
+  <line x1="100" y1="126" x2="100" y2="138" stroke="#EF5350" stroke-width="1.5"/>
+  <!-- Cheeks -->
+  <circle cx="62" cy="110" r="9" fill="#FFAB91" opacity="0.35"/>
+  <circle cx="138" cy="110" r="9" fill="#FFAB91" opacity="0.35"/>
+  <!-- Eyebrows -->
+  <path d="M68 80 Q75 74, 85 78" fill="none" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M132 80 Q125 74, 115 78" fill="none" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

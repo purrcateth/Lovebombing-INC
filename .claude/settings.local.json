@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(echo:*)",
+      "Bash(mdfind:*)",
+      "Bash(source ~/.zprofile)",
+      "Bash(source ~/.zshrc)",
+      "Bash(node --version:*)",
+      "Bash(npm:*)",
+      "Bash(curl:*)",
+      "Bash(lsof -i :3000)",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__Desktop_Commander__interact_with_process"
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <radialGradient id="bearGrad" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#D7CCC8"/>
+      <stop offset="100%" stop-color="#A1887F"/>
+    </radialGradient>
+    <filter id="bearShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#5D4037" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <!-- Ears -->
+  <circle cx="48" cy="55" r="22" fill="#A1887F" filter="url(#bearShadow)"/>
+  <circle cx="152" cy="55" r="22" fill="#A1887F"/>
+  <!-- Inner ears -->
+  <circle cx="48" cy="55" r="13" fill="#FFAB91"/>
+  <circle cx="152" cy="55" r="13" fill="#FFAB91"/>
+  <!-- Head -->
+  <ellipse cx="100" cy="110" rx="62" ry="60" fill="url(#bearGrad)" filter="url(#bearShadow)"/>
+  <!-- Muzzle -->
+  <ellipse cx="100" cy="125" rx="28" ry="22" fill="#EFEBE9"/>
+  <!-- Eyes -->
+  <circle cx="75" cy="100" r="8" fill="#3E2723"/>
+  <circle cx="125" cy="100" r="8" fill="#3E2723"/>
+  <!-- Eye shine -->
+  <circle cx="78" cy="97" r="3" fill="white"/>
+  <circle cx="128" cy="97" r="3" fill="white"/>
+  <!-- Nose -->
+  <ellipse cx="100" cy="118" rx="9" ry="7" fill="#5D4037"/>
+  <ellipse cx="100" cy="116" rx="4" ry="2.5" fill="#795548" opacity="0.5"/>
+  <!-- Mouth -->
+  <path d="M100 125 Q95 132, 90 128" fill="none" stroke="#5D4037" stroke-width="2" stroke-linecap="round"/>
+  <path d="M100 125 Q105 132, 110 128" fill="none" stroke="#5D4037" stroke-width="2" stroke-linecap="round"/>
+  <!-- Cheeks -->
+  <circle cx="60" cy="118" r="10" fill="#FFAB91" opacity="0.4"/>
+  <circle cx="140" cy="118" r="10" fill="#FFAB91" opacity="0.4"/>
+  <!-- Eyebrows -->
+  <path d="M65 88 Q72 83, 82 86" fill="none" stroke="#6D4C41" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M135 88 Q128 83, 118 86" fill="none" stroke="#6D4C41" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

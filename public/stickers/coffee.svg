@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="coffeeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFCCBC"/>
+      <stop offset="100%" stop-color="#FF8A65"/>
+    </linearGradient>
+    <linearGradient id="coffeeLiquid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6D4C41"/>
+      <stop offset="100%" stop-color="#4E342E"/>
+    </linearGradient>
+    <filter id="coffeeShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#5D4037" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <!-- Steam -->
+  <path d="M70 55 Q65 40, 72 28 Q78 18, 72 5" stroke="#BDBDBD" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M100 50 Q95 35, 102 23 Q108 13, 102 0" stroke="#BDBDBD" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.4"/>
+  <path d="M130 55 Q125 40, 132 28 Q138 18, 132 5" stroke="#BDBDBD" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <!-- Cup body -->
+  <path d="M45 70 L50 160 Q50 175, 65 175 L135 175 Q150 175, 150 160 L155 70Z" fill="url(#coffeeGrad)" filter="url(#coffeeShadow)"/>
+  <!-- Handle -->
+  <path d="M155 85 Q185 85, 185 110 Q185 135, 155 135" stroke="#FF8A65" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- Coffee liquid -->
+  <path d="M52 80 L54 82 Q100 90, 148 82 L150 80Z" fill="url(#coffeeLiquid)"/>
+  <!-- Heart in foam -->
+  <path d="M100 88 C96 84, 88 84, 88 90 C88 96, 100 104, 100 104 C100 104, 112 96, 112 90 C112 84, 104 84, 100 88Z" fill="#EFEBE9" opacity="0.7"/>
+  <!-- Cute face -->
+  <circle cx="82" cy="120" r="4" fill="#5D4037"/>
+  <circle cx="118" cy="120" r="4" fill="#5D4037"/>
+  <circle cx="85" cy="117" r="1.5" fill="white"/>
+  <circle cx="121" cy="117" r="1.5" fill="white"/>
+  <path d="M90 138 Q100 148, 110 138" fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round"/>
+  <!-- Cheeks -->
+  <circle cx="68" cy="132" r="8" fill="#FFAB91" opacity="0.4"/>
+  <circle cx="132" cy="132" r="8" fill="#FFAB91" opacity="0.4"/>
+</svg>

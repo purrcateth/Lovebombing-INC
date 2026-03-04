@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="coneGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFCC80"/>
+      <stop offset="100%" stop-color="#E6A24A"/>
+    </linearGradient>
+    <radialGradient id="scoopPinkGrad" cx="50%" cy="35%" r="50%">
+      <stop offset="0%" stop-color="#FFB3C1"/>
+      <stop offset="100%" stop-color="#FF80AB"/>
+    </radialGradient>
+    <radialGradient id="scoopWhiteGrad" cx="50%" cy="35%" r="50%">
+      <stop offset="0%" stop-color="#FFFDE7"/>
+      <stop offset="100%" stop-color="#FFF9C4"/>
+    </radialGradient>
+    <filter id="iceShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#D84315" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <!-- Cone -->
+  <path d="M65 110 L100 190 L135 110Z" fill="url(#coneGrad)" filter="url(#iceShadow)"/>
+  <!-- Cone cross-hatch -->
+  <line x1="72" y1="120" x2="118" y2="165" stroke="#D4943A" stroke-width="1.5" opacity="0.4"/>
+  <line x1="82" y1="120" x2="122" y2="150" stroke="#D4943A" stroke-width="1.5" opacity="0.4"/>
+  <line x1="92" y1="120" x2="126" y2="135" stroke="#D4943A" stroke-width="1.5" opacity="0.4"/>
+  <line x1="128" y1="120" x2="82" y2="165" stroke="#D4943A" stroke-width="1.5" opacity="0.4"/>
+  <line x1="118" y1="120" x2="78" y2="150" stroke="#D4943A" stroke-width="1.5" opacity="0.4"/>
+  <line x1="108" y1="120" x2="74" y2="135" stroke="#D4943A" stroke-width="1.5" opacity="0.4"/>
+  <!-- Bottom scoop (vanilla) -->
+  <circle cx="100" cy="90" r="38" fill="url(#scoopWhiteGrad)" filter="url(#iceShadow)"/>
+  <!-- Top scoop (strawberry) -->
+  <circle cx="100" cy="52" r="34" fill="url(#scoopPinkGrad)" filter="url(#iceShadow)"/>
+  <!-- Sprinkles -->
+  <rect x="82" y="40" width="6" height="3" rx="1" fill="#FF1744" transform="rotate(20 85 41)"/>
+  <rect x="110" y="45" width="6" height="3" rx="1" fill="#FFD600" transform="rotate(-15 113 46)"/>
+  <rect x="95" y="32" width="6" height="3" rx="1" fill="#00E676" transform="rotate(45 98 33)"/>
+  <rect x="118" y="55" width="5" height="2.5" rx="1" fill="#2979FF" transform="rotate(10 120 56)"/>
+  <rect x="75" y="55" width="5" height="2.5" rx="1" fill="#FF9100" transform="rotate(-30 77 56)"/>
+  <!-- Cute face on bottom scoop -->
+  <circle cx="86" cy="85" r="4" fill="#5D4037"/>
+  <circle cx="114" cy="85" r="4" fill="#5D4037"/>
+  <circle cx="89" cy="83" r="1.5" fill="white"/>
+  <circle cx="117" cy="83" r="1.5" fill="white"/>
+  <path d="M92 98 Q100 106, 108 98" fill="none" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Cheeks -->
+  <circle cx="74" cy="95" r="7" fill="#FFAB91" opacity="0.4"/>
+  <circle cx="126" cy="95" r="7" fill="#FFAB91" opacity="0.4"/>
+</svg>

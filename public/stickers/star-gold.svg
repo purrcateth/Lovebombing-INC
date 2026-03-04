@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="starGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="50%" stop-color="#FFD54F"/>
+      <stop offset="100%" stop-color="#FFB300"/>
+    </linearGradient>
+    <filter id="starGoldShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#FF8F00" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <polygon points="100,15 120,72 180,78 135,115 148,175 100,145 52,175 65,115 20,78 80,72" fill="url(#starGoldGrad)" filter="url(#starGoldShadow)"/>
+  <!-- Shine highlight -->
+  <polygon points="100,30 112,70 100,60 88,70" fill="white" opacity="0.3"/>
+  <!-- Cute face -->
+  <circle cx="85" cy="90" r="4" fill="#5D4037"/>
+  <circle cx="115" cy="90" r="4" fill="#5D4037"/>
+  <path d="M88 105 Q100 118, 112 105" fill="none" stroke="#5D4037" stroke-width="3" stroke-linecap="round"/>
+  <!-- Cheeks -->
+  <circle cx="72" cy="100" r="8" fill="#FFAB91" opacity="0.5"/>
+  <circle cx="128" cy="100" r="8" fill="#FFAB91" opacity="0.5"/>
+</svg>

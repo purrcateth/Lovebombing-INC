@@ -1,0 +1,371 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #C0C0C0;
+  --color-foreground: #000000;
+  --color-mac-gray: #C0C0C0;
+  --color-mac-light: #DFDFDF;
+  --color-mac-dark: #808080;
+  --color-mac-darker: #404040;
+  --color-mac-white: #FFFFFF;
+  --color-mac-black: #000000;
+  --color-mac-navy: #000080;
+  --color-mac-highlight: #000080;
+  --color-mac-title: #A0A0A0;
+  --color-cream: #C0C0C0;
+  --color-red: #000000;
+  --color-pink: #808080;
+  --color-pink-dark: #404040;
+  --color-peach: #DFDFDF;
+  --color-yellow: #DFDFDF;
+  --font-pixel: "VT323", monospace;
+  --font-sans: "Geneva", "Helvetica Neue", "Helvetica", system-ui, sans-serif;
+  --font-hand: "VT323", monospace;
+  --font-serif: "Times New Roman", "Georgia", serif;
+  --font-garamond: "EB Garamond", "Apple Garamond", "Garamond", "Times New Roman", serif;
+  --color-lavender: #C4BFE8;
+}
+
+body {
+  background: var(--color-mac-gray);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  image-rendering: auto;
+}
+
+/* ===== Classic Mac Window Chrome ===== */
+.mac-window {
+  background: var(--color-mac-white);
+  border: 2px solid var(--color-mac-black);
+  box-shadow: 4px 4px 0px var(--color-mac-black);
+  position: relative;
+}
+
+.mac-title-bar {
+  background: var(--color-mac-white);
+  border-bottom: 2px solid var(--color-mac-black);
+  padding: 3px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+  position: relative;
+  min-height: 20px;
+}
+
+/* Pinstripe pattern behind title text */
+.mac-title-bar::before {
+  content: "";
+  position: absolute;
+  left: 28px;
+  right: 8px;
+  top: 5px;
+  bottom: 5px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-mac-black) 0px,
+    var(--color-mac-black) 1px,
+    var(--color-mac-white) 1px,
+    var(--color-mac-white) 3px
+  );
+  z-index: 0;
+}
+
+.mac-title-text {
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--color-mac-black);
+  text-align: center;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  background: var(--color-mac-white);
+  padding: 0 8px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.mac-close-box {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--color-mac-black);
+  background: var(--color-mac-white);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.mac-close-box:active {
+  background: var(--color-mac-black);
+}
+
+/* ===== Beveled 3D Buttons ===== */
+.mac-btn {
+  background: var(--color-mac-white);
+  border: 2px solid var(--color-mac-black);
+  border-radius: 4px;
+  padding: 4px 16px;
+  font-family: var(--font-pixel);
+  font-size: 16px;
+  color: var(--color-mac-black);
+  cursor: pointer;
+  position: relative;
+  box-shadow:
+    inset 1px 1px 0px var(--color-mac-light),
+    inset -1px -1px 0px var(--color-mac-dark);
+  user-select: none;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.mac-btn:active {
+  box-shadow:
+    inset -1px -1px 0px var(--color-mac-light),
+    inset 1px 1px 0px var(--color-mac-dark);
+  background: var(--color-mac-gray);
+}
+
+.mac-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Primary button with double border */
+.mac-btn-primary {
+  border: 3px solid var(--color-mac-black);
+  border-radius: 6px;
+  font-weight: bold;
+  padding: 6px 20px;
+}
+
+/* Inverted / active button */
+.mac-btn-active {
+  background: var(--color-mac-black);
+  color: var(--color-mac-white);
+  box-shadow:
+    inset 1px 1px 0px var(--color-mac-darker),
+    inset -1px -1px 0px var(--color-mac-dark);
+}
+
+/* ===== Mac Input Field ===== */
+.mac-input {
+  background: var(--color-mac-white);
+  border: 2px solid var(--color-mac-black);
+  padding: 6px 12px;
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  color: var(--color-mac-black);
+  outline: none;
+  box-shadow:
+    inset 1px 1px 0px var(--color-mac-dark),
+    inset -1px -1px 0px var(--color-mac-light);
+}
+
+.mac-input:focus {
+  outline: 2px solid var(--color-mac-navy);
+  outline-offset: 1px;
+}
+
+/* ===== Mac Dialog Box ===== */
+.mac-dialog {
+  background: var(--color-mac-white);
+  border: 2px solid var(--color-mac-black);
+  box-shadow: 4px 4px 0px var(--color-mac-black);
+  padding: 24px;
+}
+
+/* ===== Mac Scrollbar ===== */
+.mac-scrollbar::-webkit-scrollbar {
+  width: 16px;
+}
+
+.mac-scrollbar::-webkit-scrollbar-track {
+  background: var(--color-mac-white);
+  border-left: 1px solid var(--color-mac-black);
+}
+
+.mac-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-mac-gray);
+  border: 1px solid var(--color-mac-black);
+  box-shadow:
+    inset 1px 1px 0px var(--color-mac-light),
+    inset -1px -1px 0px var(--color-mac-dark);
+}
+
+/* ===== Mac Beveled Divider ===== */
+.mac-divider {
+  border: none;
+  border-top: 1px solid var(--color-mac-dark);
+  border-bottom: 1px solid var(--color-mac-light);
+  margin: 0;
+}
+
+/* ===== Sunken Panel (for canvas area) ===== */
+.mac-sunken {
+  border: 2px solid var(--color-mac-black);
+  box-shadow:
+    inset 1px 1px 0px var(--color-mac-dark),
+    inset -1px -1px 0px var(--color-mac-light);
+  background: var(--color-mac-white);
+}
+
+/* ===== Button press (Mac mechanical feel) ===== */
+.btn-press {
+  transition: none;
+}
+.btn-press:active {
+  transform: none;
+}
+
+/* ===== Canvas container ===== */
+.canvas-container {
+  touch-action: none;
+}
+
+/* ===== Mac Palette Window (for sticker sidebar) ===== */
+.mac-palette {
+  background: var(--color-mac-white);
+  border: 2px solid var(--color-mac-black);
+  box-shadow: 2px 2px 0px var(--color-mac-black);
+}
+
+.mac-palette-title {
+  background: var(--color-mac-gray);
+  border-bottom: 1px solid var(--color-mac-black);
+  padding: 2px 6px;
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* ===== Checkerboard pattern (desktop background) ===== */
+.mac-desktop {
+  background-color: var(--color-mac-gray);
+  background-image:
+    linear-gradient(45deg, #b0b0b0 25%, transparent 25%),
+    linear-gradient(-45deg, #b0b0b0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #b0b0b0 75%),
+    linear-gradient(-45deg, transparent 75%, #b0b0b0 75%);
+  background-size: 4px 4px;
+  background-position: 0 0, 0 2px, 2px -2px, -2px 0px;
+}
+
+/* ===== Login Card (lavender screen style) ===== */
+.login-bg {
+  background-color: var(--color-lavender);
+}
+
+.login-card {
+  background: #F0EFF5;
+  border: 1px solid #A0A0A0;
+  box-shadow:
+    2px 2px 0px rgba(0, 0, 0, 0.15),
+    inset 0 0 0 1px #FFFFFF;
+  padding: 48px 56px 40px;
+  position: relative;
+  max-width: 520px;
+  width: 100%;
+}
+
+.login-label {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  font-family: var(--font-pixel);
+  font-size: 14px;
+  color: #000000;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.login-title {
+  font-family: var(--font-garamond);
+  font-weight: 400;
+  color: #000060;
+  font-size: 72px;
+  line-height: 1;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.login-subtitle {
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  color: #000000;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.login-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.login-row-label {
+  font-family: var(--font-pixel);
+  font-size: 20px;
+  color: #000000;
+  white-space: nowrap;
+}
+
+.login-row-input {
+  background: #FFFFFF;
+  border: 1px solid #000000;
+  border-bottom: 2px solid #000000;
+  padding: 4px 8px;
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  color: #000000;
+  outline: none;
+  width: 240px;
+}
+
+.login-row-input:focus {
+  outline: none;
+  border-color: #000060;
+}
+
+.login-enter-btn {
+  background: #E8E8E8;
+  border: 2px solid #000000;
+  border-radius: 4px;
+  padding: 6px 32px;
+  font-family: var(--font-pixel);
+  font-size: 18px;
+  font-weight: bold;
+  color: #000000;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 0px #FFFFFF,
+    inset -1px -1px 0px #A0A0A0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.login-enter-btn:active {
+  box-shadow:
+    inset -1px -1px 0px #FFFFFF,
+    inset 1px 1px 0px #A0A0A0;
+  background: #D0D0D0;
+}
+
+.login-enter-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ===== No animations - snappy interactions ===== */
+.animate-fade-in {
+  animation: none;
+}
+
+.animate-pop-in {
+  animation: none;
+}

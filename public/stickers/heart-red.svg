@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <radialGradient id="heartRedGrad" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#FF6B6B"/>
+      <stop offset="100%" stop-color="#E53E3E"/>
+    </radialGradient>
+    <filter id="heartRedShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#E53E3E" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <path d="M100 170 C60 140, 15 110, 15 70 C15 40, 40 20, 65 20 C80 20, 92 28, 100 42 C108 28, 120 20, 135 20 C160 20, 185 40, 185 70 C185 110, 140 140, 100 170Z" fill="url(#heartRedGrad)" filter="url(#heartRedShadow)"/>
+  <path d="M100 160 C65 133, 25 107, 25 72 C25 47, 45 30, 65 30 C78 30, 90 36, 100 48" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
+  <ellipse cx="65" cy="55" rx="12" ry="8" fill="white" opacity="0.25" transform="rotate(-30 65 55)"/>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <radialGradient id="smileyGrad" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#FFEE58"/>
+      <stop offset="100%" stop-color="#FDD835"/>
+    </radialGradient>
+    <filter id="smileyShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#F9A825" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Face -->
+  <circle cx="100" cy="100" r="80" fill="url(#smileyGrad)" filter="url(#smileyShadow)"/>
+  <!-- Eyes -->
+  <circle cx="72" cy="85" r="8" fill="#5D4037"/>
+  <circle cx="128" cy="85" r="8" fill="#5D4037"/>
+  <!-- Eye shine -->
+  <circle cx="75" cy="82" r="3" fill="white"/>
+  <circle cx="131" cy="82" r="3" fill="white"/>
+  <!-- Big smile -->
+  <path d="M55 115 Q100 160, 145 115" fill="none" stroke="#5D4037" stroke-width="4" stroke-linecap="round"/>
+  <!-- Cheeks -->
+  <circle cx="48" cy="112" r="14" fill="#FFAB91" opacity="0.4"/>
+  <circle cx="152" cy="112" r="14" fill="#FFAB91" opacity="0.4"/>
+</svg>

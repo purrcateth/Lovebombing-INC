@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <radialGradient id="bowLeftGrad" cx="60%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#FF80AB"/>
+      <stop offset="100%" stop-color="#F50057"/>
+    </radialGradient>
+    <radialGradient id="bowRightGrad" cx="40%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#FF80AB"/>
+      <stop offset="100%" stop-color="#F50057"/>
+    </radialGradient>
+    <filter id="bowShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#C51162" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <!-- Ribbon tails -->
+  <path d="M85 110 Q75 140, 65 175 Q70 170, 80 175 Q82 145, 95 115" fill="#E91E63" opacity="0.8"/>
+  <path d="M115 110 Q125 140, 135 175 Q130 170, 120 175 Q118 145, 105 115" fill="#E91E63" opacity="0.8"/>
+  <!-- Left loop -->
+  <path d="M100 90 Q60 40, 25 70 Q10 90, 30 110 Q50 130, 100 105Z" fill="url(#bowLeftGrad)" filter="url(#bowShadow)"/>
+  <!-- Right loop -->
+  <path d="M100 90 Q140 40, 175 70 Q190 90, 170 110 Q150 130, 100 105Z" fill="url(#bowRightGrad)" filter="url(#bowShadow)"/>
+  <!-- Left loop highlight -->
+  <path d="M85 82 Q60 55, 40 72" fill="none" stroke="white" stroke-width="3" opacity="0.3" stroke-linecap="round"/>
+  <!-- Right loop highlight -->
+  <path d="M115 82 Q140 55, 160 72" fill="none" stroke="white" stroke-width="3" opacity="0.3" stroke-linecap="round"/>
+  <!-- Center knot -->
+  <ellipse cx="100" cy="100" rx="14" ry="16" fill="#C51162"/>
+  <ellipse cx="100" cy="97" rx="8" ry="7" fill="#E91E63" opacity="0.5"/>
+  <!-- Sparkle accents -->
+  <path d="M45 45 L47 52 L54 54 L47 56 L45 63 L43 56 L36 54 L43 52Z" fill="white" opacity="0.5"/>
+  <path d="M160 42 L162 49 L169 51 L162 53 L160 60 L158 53 L151 51 L158 49Z" fill="white" opacity="0.5"/>
+</svg>

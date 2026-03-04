@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="heartSparkleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B9D"/>
+      <stop offset="50%" stop-color="#FF4081"/>
+      <stop offset="100%" stop-color="#E91E63"/>
+    </linearGradient>
+    <filter id="heartSparkleShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#E91E63" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <path d="M100 165 C63 138, 22 110, 22 72 C22 45, 44 27, 66 27 C80 27, 91 33, 100 45 C109 33, 120 27, 134 27 C156 27, 178 45, 178 72 C178 110, 137 138, 100 165Z" fill="url(#heartSparkleGrad)" filter="url(#heartSparkleShadow)"/>
+  <ellipse cx="66" cy="56" rx="11" ry="7" fill="white" opacity="0.3" transform="rotate(-30 66 56)"/>
+  <!-- Sparkles -->
+  <g fill="#FFD700">
+    <path d="M40 25 L43 35 L53 38 L43 41 L40 51 L37 41 L27 38 L37 35Z" opacity="0.9"/>
+    <path d="M160 20 L162 27 L169 29 L162 31 L160 38 L158 31 L151 29 L158 27Z" opacity="0.8"/>
+    <path d="M170 75 L172 80 L177 82 L172 84 L170 89 L168 84 L163 82 L168 80Z" opacity="0.7"/>
+    <path d="M25 85 L27 90 L32 92 L27 94 L25 99 L23 94 L18 92 L23 90Z" opacity="0.7"/>
+    <path d="M55 170 L57 175 L62 177 L57 179 L55 184 L53 179 L48 177 L53 175Z" opacity="0.6"/>
+    <path d="M145 160 L147 165 L152 167 L147 169 L145 174 L143 169 L138 167 L143 165Z" opacity="0.6"/>
+  </g>
+</svg>

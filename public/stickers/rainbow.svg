@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <filter id="rainbowShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#E040FB" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <!-- Rainbow arcs -->
+  <path d="M20 150 A80 80 0 0 1 180 150" stroke="#FF1744" stroke-width="10" fill="none" stroke-linecap="round" filter="url(#rainbowShadow)"/>
+  <path d="M30 150 A70 70 0 0 1 170 150" stroke="#FF9100" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M40 150 A60 60 0 0 1 160 150" stroke="#FFEA00" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M50 150 A50 50 0 0 1 150 150" stroke="#76FF03" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M60 150 A40 40 0 0 1 140 150" stroke="#00B0FF" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M70 150 A30 30 0 0 1 130 150" stroke="#D500F9" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <!-- Clouds -->
+  <g fill="white" filter="url(#rainbowShadow)">
+    <circle cx="25" cy="152" r="15"/>
+    <circle cx="10" cy="155" r="12"/>
+    <circle cx="38" cy="158" r="13"/>
+    <circle cx="22" cy="163" r="11"/>
+  </g>
+  <g fill="white">
+    <circle cx="175" cy="152" r="15"/>
+    <circle cx="190" cy="155" r="12"/>
+    <circle cx="162" cy="158" r="13"/>
+    <circle cx="178" cy="163" r="11"/>
+  </g>
+  <!-- Stars -->
+  <path d="M100 35 L103 45 L113 47 L105 52 L107 62 L100 56 L93 62 L95 52 L87 47 L97 45Z" fill="#FFD54F" opacity="0.8"/>
+  <circle cx="60" cy="50" r="3" fill="#FF80AB" opacity="0.6"/>
+  <circle cx="140" cy="45" r="3" fill="#FF80AB" opacity="0.6"/>
+  <circle cx="75" cy="30" r="2" fill="#FFD54F" opacity="0.5"/>
+  <circle cx="125" cy="32" r="2" fill="#FFD54F" opacity="0.5"/>
+</svg>

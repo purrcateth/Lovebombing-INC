@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="bubbleMissGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#CE93D8"/>
+      <stop offset="100%" stop-color="#AB47BC"/>
+    </linearGradient>
+    <filter id="bubbleMissShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#7B1FA2" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <!-- Speech bubble -->
+  <path d="M25 40 Q25 15, 55 15 L145 15 Q175 15, 175 40 L175 110 Q175 135, 145 135 L85 135 L55 165 L65 135 L55 135 Q25 135, 25 110Z" fill="url(#bubbleMissGrad)" filter="url(#bubbleMissShadow)"/>
+  <!-- Highlight -->
+  <path d="M35 40 Q35 25, 55 25 L140 25 Q160 25, 165 35" fill="none" stroke="white" stroke-width="2.5" opacity="0.3" stroke-linecap="round"/>
+  <!-- Text -->
+  <text x="100" y="60" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="28" fill="white">MISS</text>
+  <text x="100" y="90" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="28" fill="white">YOU!</text>
+  <!-- Hearts -->
+  <path d="M50 112 C47 108, 41 108, 41 112 C41 116, 50 122, 50 122 C50 122, 59 116, 59 112 C59 108, 53 108, 50 112Z" fill="white" opacity="0.5"/>
+  <path d="M150 112 C147 108, 141 108, 141 112 C141 116, 150 122, 150 122 C150 122, 159 116, 159 112 C159 108, 153 108, 150 112Z" fill="white" opacity="0.5"/>
+  <!-- Sparkle dots -->
+  <circle cx="100" cy="112" r="3" fill="white" opacity="0.4"/>
+  <circle cx="80" cy="118" r="2" fill="white" opacity="0.3"/>
+  <circle cx="120" cy="118" r="2" fill="white" opacity="0.3"/>
+</svg>
