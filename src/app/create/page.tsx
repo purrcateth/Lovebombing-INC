@@ -42,7 +42,7 @@ export default function CreatePage() {
       <div
         style={{
           width: "100%",
-          maxWidth: "480px",
+          maxWidth: "430px",
           border: "2px solid #000000",
           background: "#f7d4e6",
           boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
@@ -89,7 +89,7 @@ export default function CreatePage() {
                 "'Apple Garamond Light', 'Apple Garamond', Garamond, 'Times New Roman', serif",
               fontWeight: 300,
               color: "#1a1a6e",
-              fontSize: "52px",
+              fontSize: "72px",
               margin: 0,
               textShadow: "2px 2px 0 rgba(0, 0, 0, 0.2)",
             }}
@@ -146,15 +146,15 @@ export default function CreatePage() {
               disabled={!name.trim() || loading}
               aria-label={loading ? "Creating..." : "Take me there"}
               style={{
-                width: "46%",
+                width: "36%",
                 marginTop: "14px",
                 marginLeft: "auto",
                 marginRight: "auto",
                 aspectRatio: "1675 / 539",
-                minHeight: "30px",
+                minHeight: "44px",
                 border: "none",
                 padding: 0,
-                background: "url('/backgrounds/Frame.1.png') center / cover no-repeat",
+                background: "url('/backgrounds/frame1.png') center / cover no-repeat",
                 cursor: !name.trim() || loading ? "not-allowed" : "pointer",
                 opacity: !name.trim() || loading ? 0.5 : 1,
                 position: "relative",
@@ -176,23 +176,6 @@ export default function CreatePage() {
               >
                 {loading ? "Creating..." : "Take me there"}
               </span>
-              {loading ? (
-                <span
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontFamily: "'VT323', monospace",
-                    fontSize: "24px",
-                    color: "#173f73",
-                    textShadow: "0 1px 0 rgba(255,255,255,0.6)",
-                  }}
-                >
-                  Creating...
-                </span>
-              ) : null}
             </button>
           </form>
         </div>
