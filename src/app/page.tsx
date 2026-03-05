@@ -3,6 +3,7 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main
+      className="bg-landing"
       style={{
         minHeight: "100vh",
         display: "flex",

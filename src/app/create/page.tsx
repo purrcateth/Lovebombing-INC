@@ -29,6 +29,7 @@ export default function CreatePage() {
 
   return (
     <main
+      className="bg-create"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -43,7 +44,7 @@ export default function CreatePage() {
           width: "100%",
           maxWidth: "480px",
           border: "2px solid #000000",
-          background: "#C0C0C0",
+          background: "#f7d4e6",
           boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
         }}
       >
@@ -52,7 +53,7 @@ export default function CreatePage() {
           style={{
             height: "24px",
             background:
-              "repeating-linear-gradient(0deg, #FFFFFF 0px, #FFFFFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+              "repeating-linear-gradient(0deg, #FFF6FB 0px, #FFF6FB 1px, #F5CFE2 1px, #F5CFE2 2px)",
             borderBottom: "2px solid #000000",
             display: "flex",
             alignItems: "center",
@@ -64,7 +65,7 @@ export default function CreatePage() {
               width: "12px",
               height: "12px",
               border: "1px solid #000",
-              background: "#C0C0C0",
+              background: "#f5cfe2",
             }}
           />
           <span
@@ -84,11 +85,13 @@ export default function CreatePage() {
         <div style={{ padding: "30px 24px", textAlign: "center" }}>
           <h1
             style={{
-              fontFamily: "Georgia, 'Times New Roman', serif",
-              fontWeight: "bold",
+              fontFamily:
+                "'Apple Garamond Light', 'Apple Garamond', Garamond, 'Times New Roman', serif",
+              fontWeight: 300,
               color: "#1a1a6e",
-              fontSize: "36px",
+              fontSize: "52px",
               margin: 0,
+              textShadow: "2px 2px 0 rgba(0, 0, 0, 0.2)",
             }}
           >
             Lovebombing
@@ -141,21 +144,55 @@ export default function CreatePage() {
             <button
               type="submit"
               disabled={!name.trim() || loading}
+              aria-label={loading ? "Creating..." : "Take me there"}
               style={{
-                width: "100%",
-                marginTop: "12px",
-                padding: "6px 20px",
-                border: "2px outset #DFDFDF",
-                background: "#C0C0C0",
-                fontFamily: "'VT323', monospace",
-                fontSize: "16px",
-                fontWeight: "bold",
-                color: "#000000",
-                cursor: "pointer",
+                width: "46%",
+                marginTop: "14px",
+                marginLeft: "auto",
+                marginRight: "auto",
+                aspectRatio: "1675 / 539",
+                minHeight: "30px",
+                border: "none",
+                padding: 0,
+                background: "url('/backgrounds/Frame.1.png') center / cover no-repeat",
+                cursor: !name.trim() || loading ? "not-allowed" : "pointer",
                 opacity: !name.trim() || loading ? 0.5 : 1,
+                position: "relative",
+                display: "block",
               }}
             >
-              {loading ? "Creating..." : "Let's go!"}
+              <span
+                style={{
+                  position: "absolute",
+                  width: "1px",
+                  height: "1px",
+                  padding: 0,
+                  margin: "-1px",
+                  overflow: "hidden",
+                  clip: "rect(0, 0, 0, 0)",
+                  whiteSpace: "nowrap",
+                  border: 0,
+                }}
+              >
+                {loading ? "Creating..." : "Take me there"}
+              </span>
+              {loading ? (
+                <span
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontFamily: "'VT323', monospace",
+                    fontSize: "24px",
+                    color: "#173f73",
+                    textShadow: "0 1px 0 rgba(255,255,255,0.6)",
+                  }}
+                >
+                  Creating...
+                </span>
+              ) : null}
             </button>
           </form>
         </div>

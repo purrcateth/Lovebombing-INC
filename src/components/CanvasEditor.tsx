@@ -66,14 +66,17 @@ const styles = {
     display: "flex",
     height: "100vh",
     flexDirection: "column" as const,
-    background: "transparent",
+    background:
+      "url('/backgrounds/lovebombing_cloudsbg.png') center center / cover fixed no-repeat",
     fontFamily: MAC.font,
     fontSize: MAC.fontSize,
+    padding: "12px",
+    boxSizing: "border-box" as const,
   },
   rootDesktop: {
     flexDirection: "row" as const,
     gap: "12px",
-    padding: "0 8px 8px 8px",
+    padding: "42px 42px 14px 42px",
   },
   // ─── Title Bar ──────────────────
   titleBar: {

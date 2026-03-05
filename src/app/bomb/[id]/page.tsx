@@ -48,6 +48,7 @@ export default async function BombPage({ params }: PageProps) {
   if (!bomb) {
     return (
       <main
+        className="bg-canvas"
         style={{
           minHeight: "100vh",
           display: "flex",
@@ -144,7 +145,7 @@ export default async function BombPage({ params }: PageProps) {
   }
 
   return (
-    <main style={{ padding: "20px 20px 40px" }}>
+    <main className="bg-canvas" style={{ padding: "20px 20px 40px", minHeight: "100vh" }}>
       {/* Mac Finder Window */}
       <div
         style={{

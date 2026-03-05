@@ -40,6 +40,7 @@ export default function AddToBombPage() {
   if (loading) {
     return (
       <main
+        className="bg-canvas"
         style={{
           minHeight: "100vh",
           display: "flex",
@@ -74,6 +75,7 @@ export default function AddToBombPage() {
   if (notFound) {
     return (
       <main
+        className="bg-canvas"
         style={{
           minHeight: "100vh",
           display: "flex",
@@ -162,6 +164,7 @@ export default function AddToBombPage() {
   if (!nameSubmitted) {
     return (
       <main
+        className="bg-canvas"
         style={{
           minHeight: "100vh",
           display: "flex",

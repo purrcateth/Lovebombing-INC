@@ -28,7 +28,7 @@ export default function CanvasPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-5">
+      <div className="bg-canvas flex min-h-screen items-center justify-center px-5">
         <div className="lb-card px-8 py-6">
           <p className="text-lg font-medium text-[#7a4150]">Loading your canvas...</p>
         </div>
