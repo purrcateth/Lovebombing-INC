@@ -1,17 +1,29 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import BombViewer from "@/components/BombViewer";
+import { supabase } from "@/lib/supabase";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 async function getBomb(id: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   try {
-    const res = await fetch(`${baseUrl}/api/bombs/${id}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return res.json();
+    const { data: bomb, error } = await supabase
+      .from("bombs")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error || !bomb) return null;
+
+    const { data: layers } = await supabase
+      .from("bomb_layers")
+      .select("*")
+      .eq("bomb_id", id)
+      .order("created_at", { ascending: true });
+
+    return { ...bomb, layers: layers || [] };
   } catch {
     return null;
   }
