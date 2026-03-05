@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main
-      className="bg-landing"
+      className="bg-create"
       style={{
         minHeight: "100vh",
         display: "flex",
@@ -60,12 +60,13 @@ export default function Home() {
         <div style={{ padding: "40px 30px", textAlign: "center" }}>
           <h1
             style={{
-              fontFamily: "Georgia, 'Times New Roman', serif",
-              fontWeight: "bold",
+              fontFamily: "'Apple Garamond Light', 'Apple Garamond', Garamond, 'Times New Roman', serif",
+              fontWeight: 300,
               color: "#1a1a6e",
               fontSize: "48px",
               margin: 0,
               lineHeight: 1,
+              textShadow: "2px 2px 0 rgba(0, 0, 0, 0.2)",
             }}
           >
             Lovebombing
