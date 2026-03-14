@@ -204,3 +204,14 @@ img {
 .loading-pulse {
   animation: softPulse 1.5s ease-in-out infinite;
 }
+
+/* Mac-style progress bar fill */
+@keyframes progressFill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+/* Canvas editor fade in after loading screen */
+.canvas-fade-in {
+  animation: pageFadeIn 0.8s ease-out both;
+}

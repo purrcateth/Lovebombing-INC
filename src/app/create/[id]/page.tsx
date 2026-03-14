@@ -8,7 +8,8 @@ export default function CanvasPage() {
   const params = useParams();
   const id = params.id as string;
   const [creatorName, setCreatorName] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dataReady, setDataReady] = useState(false);
+  const [showCanvas, setShowCanvas] = useState(false);
 
   useEffect(() => {
     const fetchBomb = async () => {
@@ -20,13 +21,22 @@ export default function CanvasPage() {
       } catch {
         setCreatorName("Anonymous");
       } finally {
-        setLoading(false);
+        setDataReady(true);
       }
     };
     fetchBomb();
   }, [id]);
 
-  if (loading) {
+  // Show loading screen for at least 2 seconds, then fade to canvas
+  useEffect(() => {
+    if (!dataReady) return;
+    const timer = setTimeout(() => {
+      setShowCanvas(true);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [dataReady]);
+
+  if (!showCanvas) {
     return (
       <div
         className="bg-canvas"
@@ -39,23 +49,20 @@ export default function CanvasPage() {
         }}
       >
         <div
-          className="page-window loading-pulse"
+          className="page-window"
           style={{
             background: "#FFD8F6",
             border: "2px solid #000",
-            padding: "40px 32px",
             textAlign: "center",
             boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
-            maxWidth: 360,
+            maxWidth: 380,
+            width: "100%",
+            position: "relative",
           }}
         >
           {/* Title bar */}
           <div
             style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
               height: "24px",
               background:
                 "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #FFD8F6 1px, #FFD8F6 2px)",
@@ -82,18 +89,58 @@ export default function CanvasPage() {
                 fontWeight: "bold",
               }}
             >
-              Loading...
+              Lovebombing, INC.
             </span>
           </div>
-          <div style={{ marginTop: 16 }}>
+
+          {/* Loading content */}
+          <div style={{ padding: "36px 32px 40px" }}>
             <p
               style={{
-                fontFamily: "'VT323', monospace",
-                fontSize: "20px",
-                color: "#000",
+                fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
+                fontWeight: 300,
+                fontSize: "28px",
+                color: "#000066",
+                margin: 0,
+                textShadow: "-2px 3px 6px rgba(0,0,0,0.15)",
               }}
             >
               Preparing your canvas...
+            </p>
+
+            {/* Progress bar */}
+            <div
+              style={{
+                marginTop: "24px",
+                width: "100%",
+                height: "18px",
+                border: "2px solid #000",
+                background: "#FFF",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  bottom: 0,
+                  background: "repeating-linear-gradient(90deg, #6699CC 0px, #6699CC 8px, #4477AA 8px, #4477AA 16px)",
+                  animation: "progressFill 2s ease-in-out forwards",
+                }}
+              />
+            </div>
+
+            <p
+              style={{
+                fontFamily: "'VT323', monospace",
+                fontSize: "14px",
+                color: "#808080",
+                marginTop: "12px",
+              }}
+            >
+              Loading stickers, brushes, and sounds...
             </p>
           </div>
         </div>
@@ -102,6 +149,8 @@ export default function CanvasPage() {
   }
 
   return (
-    <CanvasEditor bombId={id} creatorName={creatorName || "Anonymous"} />
+    <div className="canvas-fade-in">
+      <CanvasEditor bombId={id} creatorName={creatorName || "Anonymous"} />
+    </div>
   );
 }
