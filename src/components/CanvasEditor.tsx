@@ -6,6 +6,7 @@ import { stickerCategories } from "@/lib/stickers";
 import type { StickerCategory, BeatPattern } from "@/lib/types";
 import BeatSequencer, { BeatSequencerHandle } from "@/components/BeatSequencer";
 import { createDefaultPattern } from "@/lib/audioEngine";
+import { parseGif } from "@/lib/gifParser";
 
 interface CanvasEditorProps {
   bombId: string;
@@ -73,133 +74,59 @@ function createVideoFabricImage(
 // Global registry to prevent GIF animation data from being garbage collected
 const gifAnimationRegistry = new Map<number, {
   proxy: HTMLCanvasElement;
-  decoder?: unknown;
-  blob?: Blob;
-  liveImg?: HTMLImageElement;
+  frames: { imageData: ImageData; delay: number }[];
   running: boolean;
 }>();
 let gifRegistryId = 0;
 
 /**
  * Create a Fabric image from an animated GIF.
- * Strategy 1 (Chrome/Edge): Use ImageDecoder API for frame-by-frame decoding.
- * Strategy 2 (Safari/Firefox): Use a visible 1x1 <img> element that the browser
- *   keeps animating, and copy frames via requestAnimationFrame to a proxy canvas.
+ * Uses a pure-JS GIF parser (works on ALL browsers: Safari, Firefox, Chrome).
+ * Decodes every frame from the binary data, then cycles through them on a proxy canvas.
  */
 async function createGifFabricImage(
   file: Blob
 ): Promise<{ fabricImg: fabric.FabricImage; width: number; height: number }> {
-  const proxy = document.createElement("canvas");
-  const ctx = proxy.getContext("2d")!;
-  const regId = gifRegistryId++;
+  const arrayBuffer = await file.arrayBuffer();
+  const gif = parseGif(arrayBuffer);
 
-  // ── Strategy 1: ImageDecoder API (Chrome / Edge) ──
-  if (typeof (window as unknown as Record<string, unknown>).ImageDecoder === "function") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ImageDecoderClass = (window as any).ImageDecoder;
-
-    // Keep a strong reference to the blob to prevent GC of the stream
-    const blobCopy = new Blob([await file.arrayBuffer()], { type: "image/gif" });
-    const decoder = new ImageDecoderClass({
-      data: blobCopy.stream(),
-      type: "image/gif",
-    });
-
-    await decoder.completed;
-    const frameCount = decoder.tracks.selectedTrack.frameCount;
-
-    // Decode first frame to get dimensions
-    const firstResult = await decoder.decode({ frameIndex: 0 });
-    const w = firstResult.image.displayWidth;
-    const h = firstResult.image.displayHeight;
-    proxy.width = w;
-    proxy.height = h;
-    ctx.drawImage(firstResult.image as unknown as CanvasImageSource, 0, 0);
-    firstResult.image.close();
-
-    // Store in registry to prevent GC (including blob to keep stream alive)
-    const entry = { proxy, decoder, blob: blobCopy, running: true };
-    gifAnimationRegistry.set(regId, entry);
-
-    let currentFrame = 0;
-    const cycleFrames = async () => {
-      if (!entry.running) return;
-      currentFrame = (currentFrame + 1) % frameCount;
-      try {
-        const result = await decoder.decode({ frameIndex: currentFrame });
-        ctx.clearRect(0, 0, w, h);
-        ctx.drawImage(result.image as unknown as CanvasImageSource, 0, 0);
-        const delay = (result.image.duration ?? 100000) / 1000; // microseconds → ms
-        result.image.close();
-        setTimeout(cycleFrames, Math.max(delay, 16));
-      } catch {
-        // If decode fails, restart from frame 0
-        currentFrame = -1;
-        setTimeout(cycleFrames, 100);
-      }
-    };
-    setTimeout(cycleFrames, 100);
-
-    const fabricImg = new fabric.FabricImage(proxy as unknown as HTMLImageElement);
-    fabricImg.set({ objectCaching: false, dirty: true });
-    (fabricImg as fabric.FabricImage & Record<string, unknown>)[ANIMATED_KEY] = true;
-    (fabricImg as fabric.FabricImage & Record<string, unknown>)._gifRegId = regId;
-    (fabricImg as fabric.FabricImage & Record<string, unknown>)._stopProxy = () => {
-      entry.running = false;
-      gifAnimationRegistry.delete(regId);
-      try { decoder.close(); } catch { /* */ }
-    };
-
-    return { fabricImg, width: w, height: h };
+  if (gif.frames.length === 0) {
+    // Fallback: load as static image
+    const objectUrl = URL.createObjectURL(file);
+    const img = await fabric.FabricImage.fromURL(objectUrl);
+    URL.revokeObjectURL(objectUrl);
+    return { fabricImg: img, width: img.width || 150, height: img.height || 150 };
   }
 
-  // ── Strategy 2: Visible <img> fallback (Safari / Firefox) ──
-  // The key insight: browsers ONLY advance GIF frames for elements that are
-  // genuinely rendered. We make the <img> visible but tiny (1x1px) so the
-  // browser keeps animating it, then copy each frame to the proxy canvas.
-  const objectUrl = URL.createObjectURL(file);
-  const liveImg = document.createElement("img");
-  liveImg.crossOrigin = "anonymous";
-  liveImg.src = objectUrl;
-
-  // Make it truly visible to the renderer but invisible to the user
-  Object.assign(liveImg.style, {
-    position: "fixed",
-    bottom: "0px",
-    right: "0px",
-    width: "1px",
-    height: "1px",
-    opacity: "0.01",
-    pointerEvents: "none",
-    zIndex: "-1",
-  });
-  document.body.appendChild(liveImg);
-
-  await new Promise<void>((resolve) => {
-    if (liveImg.complete && liveImg.naturalWidth > 0) { resolve(); return; }
-    liveImg.onload = () => resolve();
-    liveImg.onerror = () => resolve();
-  });
-
-  const w = liveImg.naturalWidth || 150;
-  const h = liveImg.naturalHeight || 150;
+  const w = gif.width;
+  const h = gif.height;
+  const proxy = document.createElement("canvas");
   proxy.width = w;
   proxy.height = h;
+  const ctx = proxy.getContext("2d")!;
+
+  // Draw first frame
+  ctx.putImageData(gif.frames[0].imageData, 0, 0);
 
   // Store in registry to prevent GC
-  const entry = { proxy, liveImg, running: true };
+  const regId = gifRegistryId++;
+  const entry = {
+    proxy,
+    frames: gif.frames.map((f) => ({ imageData: f.imageData, delay: f.delay })),
+    running: true,
+  };
   gifAnimationRegistry.set(regId, entry);
 
-  // Copy frames from the live <img> to the proxy canvas via rAF
-  const copyFrame = () => {
+  // Cycle through frames
+  let currentFrame = 0;
+  const cycleFrames = () => {
     if (!entry.running) return;
-    try {
-      ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(liveImg, 0, 0, w, h);
-    } catch { /* cross-origin or decode error */ }
-    requestAnimationFrame(copyFrame);
+    currentFrame = (currentFrame + 1) % entry.frames.length;
+    ctx.putImageData(entry.frames[currentFrame].imageData, 0, 0);
+    const delay = entry.frames[currentFrame].delay || 100;
+    setTimeout(cycleFrames, Math.max(delay, 16));
   };
-  requestAnimationFrame(copyFrame);
+  setTimeout(cycleFrames, entry.frames[0].delay || 100);
 
   const fabricImg = new fabric.FabricImage(proxy as unknown as HTMLImageElement);
   fabricImg.set({ objectCaching: false, dirty: true });
@@ -208,8 +135,6 @@ async function createGifFabricImage(
   (fabricImg as fabric.FabricImage & Record<string, unknown>)._stopProxy = () => {
     entry.running = false;
     gifAnimationRegistry.delete(regId);
-    try { document.body.removeChild(liveImg); } catch { /* */ }
-    URL.revokeObjectURL(objectUrl);
   };
 
   return { fabricImg, width: w, height: h };
