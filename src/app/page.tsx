@@ -1,6 +1,32 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/bombs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creator_name: name.trim() }),
+      });
+      const data = await res.json();
+      router.push(`/create/${data.id}`);
+    } catch {
+      alert("Something went wrong. Please try again!");
+      setLoading(false);
+    }
+  };
+
   return (
     <main
       className="bg-create"
@@ -12,116 +38,130 @@ export default function Home() {
         padding: "20px",
       }}
     >
-      {/* Mac Window */}
+      {/* Pink window */}
       <div
         style={{
           width: "100%",
           maxWidth: "520px",
-          border: "2px solid #000000",
-          background: "#C0C0C0",
-          boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+          background: "#FFD8F6",
+          border: "1px solid #262626",
+          boxShadow: "1px 1px 0px 0px #262626",
+          position: "relative",
+          overflow: "hidden",
+          padding: "32px 44px 40px",
+          textAlign: "center",
         }}
       >
-        {/* Pinstriped title bar */}
-        <div
+        {/* Inner highlight lines (top + left = white) */}
+        <div style={{ position: "absolute", top: 1, left: 0, right: 0, height: 1, background: "#FFFFFF" }} />
+        <div style={{ position: "absolute", top: 0, left: 1, bottom: 0, width: 1, background: "#FFFFFF" }} />
+        {/* Inner shadow lines (bottom + right = gray) */}
+        <div style={{ position: "absolute", bottom: 1, left: 0, right: 0, height: 1, background: "#808080" }} />
+        <div style={{ position: "absolute", top: 0, right: 1, bottom: 0, width: 1, background: "#808080" }} />
+
+        {/* Title — Apple Garamond Light */}
+        <h1
           style={{
-            height: "24px",
-            background:
-              "repeating-linear-gradient(0deg, #FFFFFF 0px, #FFFFFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
-            borderBottom: "2px solid #000000",
-            display: "flex",
-            alignItems: "center",
-            padding: "0 8px",
-            gap: "6px",
+            fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, 'Times New Roman', serif",
+            fontWeight: 300,
+            fontStyle: "normal",
+            fontSize: 80,
+            color: "#000066",
+            lineHeight: "normal",
+            margin: 0,
+            textShadow: "-3.5px 6px 12px rgba(0,0,0,0.25), 0px 4.5px 4.5px rgba(0,0,0,0.25)",
           }}
         >
-          <div
-            style={{
-              width: "12px",
-              height: "12px",
-              border: "1px solid #000",
-              background: "#C0C0C0",
-            }}
-          />
-          <span
-            style={{
-              flex: 1,
-              textAlign: "center",
-              fontFamily: "'VT323', monospace",
-              fontSize: "16px",
-              fontWeight: "bold",
-            }}
-          >
-            Lovebombing, INC.
-          </span>
-        </div>
+          Lovebombing
+        </h1>
 
-        {/* Window body */}
-        <div style={{ padding: "40px 30px", textAlign: "center" }}>
-          <h1
-            style={{
-              fontFamily: "'Apple Garamond Light', 'Apple Garamond', Garamond, 'Times New Roman', serif",
-              fontWeight: 300,
-              color: "#1a1a6e",
-              fontSize: "48px",
-              margin: 0,
-              lineHeight: 1,
-              textShadow: "2px 2px 0 rgba(0, 0, 0, 0.2)",
-            }}
-          >
-            Lovebombing
-          </h1>
-          <p
-            style={{
-              fontFamily: "'VT323', monospace",
-              fontSize: "16px",
-              color: "#000000",
-              marginTop: "12px",
-            }}
-          >
-            show love through handmade digital art
-          </p>
+        {/* Subtitle */}
+        <p
+          style={{
+            fontFamily: "'B612 Mono', monospace",
+            fontSize: 14,
+            color: "#262626",
+            letterSpacing: "1.1px",
+            margin: "16px 0 0",
+            whiteSpace: "nowrap",
+            textShadow: "0px 0px 1px #262626, 0px 0px 1px #262626",
+          }}
+        >
+          Bomb your loved ones.Or your haters.
+        </p>
 
+        {/* Name input row */}
+        <form onSubmit={handleSubmit} style={{ marginTop: "52px" }}>
           <div
             style={{
               display: "flex",
-              flexWrap: "wrap",
-              gap: "10px",
+              alignItems: "center",
               justifyContent: "center",
-              marginTop: "24px",
+              gap: "10px",
+              width: 430,
+              height: 34,
+              margin: "0 auto",
             }}
           >
-            <Link
-              href="/create"
+            <label
+              htmlFor="name-input"
               style={{
-                padding: "6px 20px",
-                border: "2px outset #DFDFDF",
-                background: "#C0C0C0",
                 fontFamily: "'VT323', monospace",
-                fontSize: "16px",
-                color: "#000000",
-                textDecoration: "none",
-                fontWeight: "bold",
+                fontSize: 22,
+                color: "#262626",
+                whiteSpace: "nowrap",
+                letterSpacing: "1.8px",
+                textShadow: "0px 0px 1px #262626, 0px 0px 1px #262626",
               }}
             >
-              Create a Lovebomb
-            </Link>
-            <Link
-              href="/bomb/demo"
+              Name:
+            </label>
+            <input
+              id="name-input"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={30}
+              autoFocus
               style={{
-                padding: "6px 20px",
-                border: "2px outset #DFDFDF",
+                flex: 1,
+                height: "100%",
                 background: "#FFFFFF",
+                border: "1px solid #000000",
+                outline: "none",
                 fontFamily: "'VT323', monospace",
-                fontSize: "16px",
-                color: "#000000",
-                textDecoration: "none",
+                fontSize: 20,
+                padding: "0 6px",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {/* CTA button — frame1.png aqua button */}
+          <div style={{ display: "flex", justifyContent: "center", marginTop: "36px" }}>
+            <button
+              type="submit"
+              disabled={!name.trim() || loading}
+              style={{
+                padding: 0,
+                border: "none",
+                background: "transparent",
+                cursor: !name.trim() || loading ? "not-allowed" : "pointer",
+                opacity: !name.trim() || loading ? 0.5 : 1,
               }}
             >
-              View Example
-            </Link>
+              <img
+                src="/backgrounds/frame1.png"
+                alt="Take me there"
+                style={{
+                  height: 80,
+                  width: "auto",
+                  display: "block",
+                }}
+              />
+            </button>
           </div>
-        </div>
+        </form>
       </div>
     </main>
   );

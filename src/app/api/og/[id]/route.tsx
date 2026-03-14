@@ -29,7 +29,7 @@ export async function GET(
             justifyContent: "center",
             width: "100%",
             height: "100%",
-            background: "#C0C0C0",
+            background: "#FFD8F6",
             fontFamily: "monospace",
           }}
         >
@@ -145,7 +145,7 @@ export async function GET(
             justifyContent: "center",
             width: "100%",
             height: "100%",
-            background: "#C0C0C0",
+            background: "#FFD8F6",
             fontFamily: "monospace",
           }}
         >

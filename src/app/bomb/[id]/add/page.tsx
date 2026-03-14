@@ -52,7 +52,7 @@ export default function AddToBombPage() {
         <div
           style={{
             border: "2px solid #000",
-            background: "#C0C0C0",
+            background: "#FFD8F6",
             padding: "20px 30px",
             boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
           }}
@@ -89,7 +89,7 @@ export default function AddToBombPage() {
             width: "100%",
             maxWidth: "480px",
             border: "2px solid #000",
-            background: "#C0C0C0",
+            background: "#FFD8F6",
             boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
           }}
         >
@@ -98,7 +98,7 @@ export default function AddToBombPage() {
             style={{
               height: "24px",
               background:
-                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #FFD8F6 1px, #FFD8F6 2px)",
               borderBottom: "2px solid #000",
               display: "flex",
               alignItems: "center",
@@ -110,7 +110,7 @@ export default function AddToBombPage() {
                 width: "12px",
                 height: "12px",
                 border: "1px solid #000",
-                background: "#C0C0C0",
+                background: "#FFD8F6",
               }}
             />
             <span
@@ -139,19 +139,7 @@ export default function AddToBombPage() {
               This lovebomb doesn&apos;t exist
             </h1>
             <div style={{ marginTop: "16px" }}>
-              <Link
-                href="/create"
-                style={{
-                  padding: "6px 20px",
-                  border: "2px outset #DFDFDF",
-                  background: "#C0C0C0",
-                  fontFamily: "'VT323', monospace",
-                  fontSize: "16px",
-                  color: "#000",
-                  textDecoration: "none",
-                  fontWeight: "bold",
-                }}
-              >
+              <Link href="/create" className="aqua-cta">
                 Create Your Own
               </Link>
             </div>
@@ -178,7 +166,7 @@ export default function AddToBombPage() {
             width: "100%",
             maxWidth: "480px",
             border: "2px solid #000",
-            background: "#C0C0C0",
+            background: "#FFD8F6",
             boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
           }}
         >
@@ -187,7 +175,7 @@ export default function AddToBombPage() {
             style={{
               height: "24px",
               background:
-                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #FFD8F6 1px, #FFD8F6 2px)",
               borderBottom: "2px solid #000",
               display: "flex",
               alignItems: "center",
@@ -199,7 +187,7 @@ export default function AddToBombPage() {
                 width: "12px",
                 height: "12px",
                 border: "1px solid #000",
-                background: "#C0C0C0",
+                background: "#FFD8F6",
               }}
             />
             <span
@@ -267,19 +255,8 @@ export default function AddToBombPage() {
               <button
                 type="submit"
                 disabled={!name.trim()}
-                style={{
-                  width: "100%",
-                  marginTop: "12px",
-                  padding: "6px 20px",
-                  border: "2px outset #DFDFDF",
-                  background: "#C0C0C0",
-                  fontFamily: "'VT323', monospace",
-                  fontSize: "16px",
-                  fontWeight: "bold",
-                  color: "#000",
-                  cursor: "pointer",
-                  opacity: !name.trim() ? 0.5 : 1,
-                }}
+                className="aqua-cta"
+                style={{ width: "100%", marginTop: "12px" }}
               >
                 Let&apos;s go
               </button>
