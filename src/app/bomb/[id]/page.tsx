@@ -70,6 +70,7 @@ export default async function BombPage({ params }: PageProps) {
         }}
       >
         <div
+          className="page-window"
           style={{
             width: "100%",
             maxWidth: "480px",
@@ -148,6 +149,7 @@ export default async function BombPage({ params }: PageProps) {
     <main className="bg-canvas" style={{ padding: "20px", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       {/* Mac Finder Window */}
       <div
+        className="page-window"
         style={{
           width: "100%",
           maxWidth: "700px",

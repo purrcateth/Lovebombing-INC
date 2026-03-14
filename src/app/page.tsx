@@ -40,6 +40,7 @@ export default function Home() {
     >
       {/* Pink window */}
       <div
+        className="page-window"
         style={{
           width: "100%",
           maxWidth: "520px",
