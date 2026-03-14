@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as fabric from "fabric";
+import type { BeatPattern } from "@/lib/types";
+import BeatSequencer from "@/components/BeatSequencer";
 
 interface BombViewerProps {
   canvasJson: object;
   layers: { canvas_json: object }[];
+  beatData?: BeatPattern | null;
 }
 
 const CANVAS_SIZE = 1080;
@@ -25,7 +28,7 @@ const objectHasAnimation = (obj: fabric.FabricObject) => {
   return false;
 };
 
-export default function BombViewer({ canvasJson, layers }: BombViewerProps) {
+export default function BombViewer({ canvasJson, layers, beatData }: BombViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -112,38 +115,86 @@ export default function BombViewer({ canvasJson, layers }: BombViewerProps) {
     };
   }, [canvasJson, layers]);
 
+  const hasBeat = beatData && beatData.tracks.some((t) => t.pattern.some(Boolean));
+
   return (
-    <div
-      ref={containerRef}
-      style={{
-        display: "flex",
-        width: "100%",
-        justifyContent: "center",
-      }}
-    >
+    <div style={{ width: "100%" }}>
       <div
+        ref={containerRef}
         style={{
-          padding: 0,
-          background: "#FFFFFF",
-          border: "2px inset #DFDFDF",
+          display: "flex",
+          width: "100%",
+          justifyContent: "center",
         }}
       >
         <div
           style={{
-            width: CANVAS_SIZE * scale,
-            height: CANVAS_SIZE * scale,
-            overflow: "hidden",
+            padding: 0,
+            background: "#FFFFFF",
+            border: "2px inset #DFDFDF",
           }}
         >
-          <canvas
-            ref={canvasRef}
+          <div
             style={{
-              transform: `scale(${scale})`,
-              transformOrigin: "top left",
+              width: CANVAS_SIZE * scale,
+              height: CANVAS_SIZE * scale,
+              overflow: "hidden",
             }}
-          />
+          >
+            <canvas
+              ref={canvasRef}
+              style={{
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              }}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Beat playback section */}
+      {hasBeat && beatData && (
+        <div
+          style={{
+            marginTop: "16px",
+            border: "2px solid #000",
+            background: "#FFD8F6",
+            boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div
+            style={{
+              height: "24px",
+              background:
+                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #FFD8F6 1px, #FFD8F6 2px)",
+              borderBottom: "2px solid #000",
+              display: "flex",
+              alignItems: "center",
+              padding: "0 8px",
+            }}
+          >
+            <div style={{ width: "12px", height: "12px", border: "1px solid #000", background: "#FFD8F6" }} />
+            <span
+              style={{
+                flex: 1,
+                textAlign: "center",
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                fontWeight: "bold",
+              }}
+            >
+              Beat
+            </span>
+          </div>
+          <div style={{ height: "240px", overflow: "auto" }}>
+            <BeatSequencer
+              pattern={beatData}
+              onChange={() => {}}
+              readOnly
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

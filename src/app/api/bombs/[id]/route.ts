@@ -45,7 +45,7 @@ export async function PUT(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const body = await request.json();
-    const { canvas_json, thumbnail_data } = body;
+    const { canvas_json, thumbnail_data, beat_data } = body;
 
     if (!canvas_json) {
       return NextResponse.json(
@@ -62,13 +62,20 @@ export async function PUT(request: Request, context: RouteContext) {
       thumbnail_url = thumbnail_data;
     }
 
+    const updateData: Record<string, unknown> = {
+      canvas_json,
+      thumbnail_url,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Only include beat_data if provided (column may not exist yet)
+    if (beat_data !== undefined) {
+      updateData.beat_data = beat_data;
+    }
+
     const { error } = await supabase
       .from("bombs")
-      .update({
-        canvas_json,
-        thumbnail_url,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", id);
 
     if (error) {

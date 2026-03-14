@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as fabric from "fabric";
 import { stickerCategories } from "@/lib/stickers";
-import type { StickerCategory } from "@/lib/types";
+import type { StickerCategory, BeatPattern } from "@/lib/types";
+import BeatSequencer, { BeatSequencerHandle } from "@/components/BeatSequencer";
+import { createDefaultPattern } from "@/lib/audioEngine";
 
 interface CanvasEditorProps {
   bombId: string;
@@ -17,7 +19,8 @@ interface CanvasEditorProps {
 type ToolType = "pointer" | "pencil" | "eraser";
 
 const MAX_OBJECTS = 100;
-const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB for images
+const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1GB for videos
 const CANVAS_SIZE = 1080;
 
 // Custom property to mark locked background objects
@@ -38,16 +41,190 @@ const objectHasAnimation = (obj: fabric.FabricObject) => {
   return false;
 };
 
+/**
+ * Create a Fabric image from a video element using a proxy canvas.
+ */
+function createVideoFabricImage(
+  video: HTMLVideoElement,
+  width: number,
+  height: number
+): fabric.FabricImage {
+  const proxy = document.createElement("canvas");
+  proxy.width = width;
+  proxy.height = height;
+  const ctx = proxy.getContext("2d")!;
+  ctx.drawImage(video, 0, 0, width, height);
+
+  let running = true;
+  const tick = () => {
+    if (!running) return;
+    try { ctx.drawImage(video, 0, 0, width, height); } catch { /* */ }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+
+  const fabricImg = new fabric.FabricImage(proxy as unknown as HTMLImageElement);
+  fabricImg.set({ objectCaching: false, dirty: true });
+  (fabricImg as fabric.FabricImage & Record<string, unknown>)[ANIMATED_KEY] = true;
+  (fabricImg as fabric.FabricImage & Record<string, unknown>)._stopProxy = () => { running = false; };
+  return fabricImg;
+}
+
+// Global registry to prevent GIF animation data from being garbage collected
+const gifAnimationRegistry = new Map<number, {
+  proxy: HTMLCanvasElement;
+  decoder?: unknown;
+  blob?: Blob;
+  liveImg?: HTMLImageElement;
+  running: boolean;
+}>();
+let gifRegistryId = 0;
+
+/**
+ * Create a Fabric image from an animated GIF.
+ * Strategy 1 (Chrome/Edge): Use ImageDecoder API for frame-by-frame decoding.
+ * Strategy 2 (Safari/Firefox): Use a visible 1x1 <img> element that the browser
+ *   keeps animating, and copy frames via requestAnimationFrame to a proxy canvas.
+ */
+async function createGifFabricImage(
+  file: Blob
+): Promise<{ fabricImg: fabric.FabricImage; width: number; height: number }> {
+  const proxy = document.createElement("canvas");
+  const ctx = proxy.getContext("2d")!;
+  const regId = gifRegistryId++;
+
+  // ── Strategy 1: ImageDecoder API (Chrome / Edge) ──
+  if (typeof (window as unknown as Record<string, unknown>).ImageDecoder === "function") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ImageDecoderClass = (window as any).ImageDecoder;
+
+    // Keep a strong reference to the blob to prevent GC of the stream
+    const blobCopy = new Blob([await file.arrayBuffer()], { type: "image/gif" });
+    const decoder = new ImageDecoderClass({
+      data: blobCopy.stream(),
+      type: "image/gif",
+    });
+
+    await decoder.completed;
+    const frameCount = decoder.tracks.selectedTrack.frameCount;
+
+    // Decode first frame to get dimensions
+    const firstResult = await decoder.decode({ frameIndex: 0 });
+    const w = firstResult.image.displayWidth;
+    const h = firstResult.image.displayHeight;
+    proxy.width = w;
+    proxy.height = h;
+    ctx.drawImage(firstResult.image as unknown as CanvasImageSource, 0, 0);
+    firstResult.image.close();
+
+    // Store in registry to prevent GC (including blob to keep stream alive)
+    const entry = { proxy, decoder, blob: blobCopy, running: true };
+    gifAnimationRegistry.set(regId, entry);
+
+    let currentFrame = 0;
+    const cycleFrames = async () => {
+      if (!entry.running) return;
+      currentFrame = (currentFrame + 1) % frameCount;
+      try {
+        const result = await decoder.decode({ frameIndex: currentFrame });
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(result.image as unknown as CanvasImageSource, 0, 0);
+        const delay = (result.image.duration ?? 100000) / 1000; // microseconds → ms
+        result.image.close();
+        setTimeout(cycleFrames, Math.max(delay, 16));
+      } catch {
+        // If decode fails, restart from frame 0
+        currentFrame = -1;
+        setTimeout(cycleFrames, 100);
+      }
+    };
+    setTimeout(cycleFrames, 100);
+
+    const fabricImg = new fabric.FabricImage(proxy as unknown as HTMLImageElement);
+    fabricImg.set({ objectCaching: false, dirty: true });
+    (fabricImg as fabric.FabricImage & Record<string, unknown>)[ANIMATED_KEY] = true;
+    (fabricImg as fabric.FabricImage & Record<string, unknown>)._gifRegId = regId;
+    (fabricImg as fabric.FabricImage & Record<string, unknown>)._stopProxy = () => {
+      entry.running = false;
+      gifAnimationRegistry.delete(regId);
+      try { decoder.close(); } catch { /* */ }
+    };
+
+    return { fabricImg, width: w, height: h };
+  }
+
+  // ── Strategy 2: Visible <img> fallback (Safari / Firefox) ──
+  // The key insight: browsers ONLY advance GIF frames for elements that are
+  // genuinely rendered. We make the <img> visible but tiny (1x1px) so the
+  // browser keeps animating it, then copy each frame to the proxy canvas.
+  const objectUrl = URL.createObjectURL(file);
+  const liveImg = document.createElement("img");
+  liveImg.crossOrigin = "anonymous";
+  liveImg.src = objectUrl;
+
+  // Make it truly visible to the renderer but invisible to the user
+  Object.assign(liveImg.style, {
+    position: "fixed",
+    bottom: "0px",
+    right: "0px",
+    width: "1px",
+    height: "1px",
+    opacity: "0.01",
+    pointerEvents: "none",
+    zIndex: "-1",
+  });
+  document.body.appendChild(liveImg);
+
+  await new Promise<void>((resolve) => {
+    if (liveImg.complete && liveImg.naturalWidth > 0) { resolve(); return; }
+    liveImg.onload = () => resolve();
+    liveImg.onerror = () => resolve();
+  });
+
+  const w = liveImg.naturalWidth || 150;
+  const h = liveImg.naturalHeight || 150;
+  proxy.width = w;
+  proxy.height = h;
+
+  // Store in registry to prevent GC
+  const entry = { proxy, liveImg, running: true };
+  gifAnimationRegistry.set(regId, entry);
+
+  // Copy frames from the live <img> to the proxy canvas via rAF
+  const copyFrame = () => {
+    if (!entry.running) return;
+    try {
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(liveImg, 0, 0, w, h);
+    } catch { /* cross-origin or decode error */ }
+    requestAnimationFrame(copyFrame);
+  };
+  requestAnimationFrame(copyFrame);
+
+  const fabricImg = new fabric.FabricImage(proxy as unknown as HTMLImageElement);
+  fabricImg.set({ objectCaching: false, dirty: true });
+  (fabricImg as fabric.FabricImage & Record<string, unknown>)[ANIMATED_KEY] = true;
+  (fabricImg as fabric.FabricImage & Record<string, unknown>)._gifRegId = regId;
+  (fabricImg as fabric.FabricImage & Record<string, unknown>)._stopProxy = () => {
+    entry.running = false;
+    gifAnimationRegistry.delete(regId);
+    try { document.body.removeChild(liveImg); } catch { /* */ }
+    URL.revokeObjectURL(objectUrl);
+  };
+
+  return { fabricImg, width: w, height: h };
+}
+
 // ─── Mac OS Retro Inline Styles ───────────────────────────────────
 const MAC = {
-  bg: "#C0C0C0",
+  bg: "#FFD8F6",
   bgDark: "#808080",
   bgLight: "#DFDFDF",
   border: "#808080",
   borderDark: "#000000",
   borderLight: "#FFFFFF",
   pinstripes:
-    "repeating-linear-gradient(0deg, #FFFFFF 0px, #FFFFFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+    "repeating-linear-gradient(0deg, #FFFFFF 0px, #FFFFFF 1px, #FFD8F6 1px, #FFD8F6 2px)",
   inset:
     "inset 1px 1px 2px rgba(0,0,0,0.3), inset -1px -1px 1px rgba(255,255,255,0.5)",
   outset:
@@ -182,6 +359,7 @@ const styles = {
     width: "220px",
     height: "100%",
     boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+    borderTop: "2px solid #000000",
   },
   sidebarMobile: {
     position: "fixed" as const,
@@ -396,6 +574,10 @@ export default function CanvasEditor({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [dragOverCanvas, setDragOverCanvas] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [activeTab, setActiveTab] = useState<"canvas" | "beats">("canvas");
+  const [beatData, setBeatData] = useState<BeatPattern>(createDefaultPattern());
+  const beatRef = useRef<BeatSequencerHandle>(null);
+  const [, forceUpdate] = useState(0); // force re-render when beat state changes
   const animationFrameRef = useRef<number | null>(null);
 
   const stopAnimationLoop = useCallback(() => {
@@ -420,6 +602,12 @@ export default function CanvasEditor({
           stopAnimationLoop();
           return;
         }
+        // Mark all animated objects as dirty so Fabric re-draws them
+        fabricRef.current.getObjects().forEach((obj) => {
+          if (objectHasAnimation(obj)) {
+            obj.dirty = true;
+          }
+        });
         fabricRef.current.requestRenderAll();
         animationFrameRef.current = requestAnimationFrame(tick);
       };
@@ -549,7 +737,12 @@ export default function CanvasEditor({
 
       for (const obj of canvas.getObjects()) {
         if (objectHasAnimation(obj)) {
-          obj.set({ objectCaching: false });
+          obj.set({
+            objectCaching: false,
+            statefullCache: false,
+            noScaleCache: true,
+            dirty: true,
+          });
         }
       }
 
@@ -680,24 +873,33 @@ export default function CanvasEditor({
     }
 
     try {
-      const img = await fabric.FabricImage.fromURL(src, { crossOrigin: "anonymous" });
+      const isAnimated = isGifSource(src);
       const targetSize = 150;
-      const scaleX = targetSize / (img.width || 150);
-      const scaleY = targetSize / (img.height || 150);
-      const s = Math.min(scaleX, scaleY);
-
       const left = canvasX !== undefined ? canvasX - (targetSize / 2) : CANVAS_SIZE / 2 - (targetSize / 2);
       const top = canvasY !== undefined ? canvasY - (targetSize / 2) : CANVAS_SIZE / 2 - (targetSize / 2);
 
-      img.set({ scaleX: s, scaleY: s, left, top });
-      const isAnimated = isGifSource(src);
-      (img as fabric.FabricImage & Record<string, boolean>)[ANIMATED_KEY] = isAnimated;
       if (isAnimated) {
-        img.set({ objectCaching: false });
+        // For GIF stickers: fetch blob, decode frames with ImageDecoder
+        const response = await fetch(src);
+        const blob = await response.blob();
+        const { fabricImg, width: w, height: h } = await createGifFabricImage(blob);
+        const scaleX = targetSize / w;
+        const scaleY = targetSize / h;
+        const s = Math.min(scaleX, scaleY);
+        fabricImg.set({ scaleX: s, scaleY: s, left, top });
+        canvas.add(fabricImg);
+        canvas.setActiveObject(fabricImg);
+        canvas.renderAll();
+      } else {
+        const img = await fabric.FabricImage.fromURL(src, { crossOrigin: "anonymous" });
+        const scaleX = targetSize / (img.width || 150);
+        const scaleY = targetSize / (img.height || 150);
+        const s = Math.min(scaleX, scaleY);
+        img.set({ scaleX: s, scaleY: s, left, top });
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.renderAll();
       }
-      canvas.add(img);
-      canvas.setActiveObject(img);
-      canvas.renderAll();
       setActiveTool("pointer");
       setSidebarOpen(false);
     } catch {
@@ -736,12 +938,16 @@ export default function CanvasEditor({
     setDragOverCanvas(false);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > MAX_UPLOAD_SIZE) {
-      alert("Image is too large! Max size is 5MB.");
+    const isVideo = file.type.startsWith("video/");
+    const isGif = file.type === "image/gif";
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+
+    if (file.size > maxSize) {
+      alert(isVideo ? "Video is too large! Max size is 1GB." : "Image is too large! Max size is 5MB.");
       return;
     }
 
@@ -754,35 +960,84 @@ export default function CanvasEditor({
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const dataUrl = event.target?.result as string;
-      try {
-        const img = await fabric.FabricImage.fromURL(dataUrl);
-        const maxSize = CANVAS_SIZE * 0.4;
-        const scaleX = maxSize / (img.width || maxSize);
-        const scaleY = maxSize / (img.height || maxSize);
-        const s = Math.min(scaleX, scaleY, 1);
-        img.set({
-          scaleX: s,
-          scaleY: s,
-          left: CANVAS_SIZE / 2 - ((img.width || 0) * s) / 2,
-          top: CANVAS_SIZE / 2 - ((img.height || 0) * s) / 2,
+    const objectUrl = URL.createObjectURL(file);
+
+    try {
+      if (isVideo) {
+        // Videos: load <video>, use proxy canvas that copies each frame
+        const video = document.createElement("video");
+        video.src = objectUrl;
+        video.loop = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.style.position = "fixed";
+        video.style.left = "-9999px";
+        video.style.visibility = "hidden";
+        document.body.appendChild(video);
+
+        await new Promise<void>((resolve, reject) => {
+          video.onloadeddata = () => resolve();
+          video.onerror = () => reject(new Error("Could not load video"));
+          video.load();
         });
-        const isAnimated = file.type === "image/gif";
-        (img as fabric.FabricImage & Record<string, boolean>)[ANIMATED_KEY] = isAnimated;
-        if (isAnimated) {
-          img.set({ objectCaching: false });
-        }
-        canvas.add(img);
-        canvas.setActiveObject(img);
+
+        try { await video.play(); } catch { /* muted autoplay usually works */ }
+
+        const w = video.videoWidth || 640;
+        const h = video.videoHeight || 360;
+        const fabricImg = createVideoFabricImage(video, w, h);
+        const canvasMax = CANVAS_SIZE * 0.4;
+        const s = Math.min(canvasMax / w, canvasMax / h, 1);
+        fabricImg.set({
+          scaleX: s, scaleY: s,
+          left: CANVAS_SIZE / 2 - (w * s) / 2,
+          top: CANVAS_SIZE / 2 - (h * s) / 2,
+        });
+        canvas.add(fabricImg);
+        canvas.setActiveObject(fabricImg);
         canvas.renderAll();
         setActiveTool("pointer");
-      } catch {
-        alert("Could not load image. Please try another one.");
+      } else if (isGif) {
+        // GIFs: use ImageDecoder API to manually decode each frame
+        const { fabricImg, width: w, height: h } = await createGifFabricImage(file);
+        const canvasMax = CANVAS_SIZE * 0.4;
+        const s = Math.min(canvasMax / w, canvasMax / h, 1);
+        fabricImg.set({
+          scaleX: s, scaleY: s,
+          left: CANVAS_SIZE / 2 - (w * s) / 2,
+          top: CANVAS_SIZE / 2 - (h * s) / 2,
+        });
+        canvas.add(fabricImg);
+        canvas.setActiveObject(fabricImg);
+        canvas.renderAll();
+        setActiveTool("pointer");
+      } else {
+        // Regular static images: use data URL
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const dataUrl = event.target?.result as string;
+          try {
+            const fabricImg = await fabric.FabricImage.fromURL(dataUrl);
+            const canvasMax = CANVAS_SIZE * 0.4;
+            const s = Math.min(canvasMax / (fabricImg.width || canvasMax), canvasMax / (fabricImg.height || canvasMax), 1);
+            fabricImg.set({
+              scaleX: s, scaleY: s,
+              left: CANVAS_SIZE / 2 - ((fabricImg.width || 0) * s) / 2,
+              top: CANVAS_SIZE / 2 - ((fabricImg.height || 0) * s) / 2,
+            });
+            canvas.add(fabricImg);
+            canvas.setActiveObject(fabricImg);
+            canvas.renderAll();
+            setActiveTool("pointer");
+          } catch {
+            alert("Could not load image. Please try another one.");
+          }
+        };
+        reader.readAsDataURL(file);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      alert("Could not load file. Please try another one.");
+    }
     e.target.value = "";
   };
 
@@ -889,6 +1144,7 @@ export default function CanvasEditor({
         : {
             canvas_json: canvasJson,
             thumbnail_data: thumbnailDataUrl,
+            beat_data: beatData.tracks.some((t) => t.pattern.some(Boolean)) ? beatData : null,
           };
 
       const res = await fetch(endpoint, {
@@ -989,28 +1245,29 @@ export default function CanvasEditor({
       >
         {/* Palette title bar with pinstripes */}
         <div style={styles.paletteTitleBar}>
-          <div style={{ width: "10px", height: "10px", border: "1px solid #000", background: "#C0C0C0" }} />
+          <div style={{ width: "10px", height: "10px", border: "1px solid #000", background: "#FFD8F6" }} />
           <span>Stickers</span>
         </div>
         <div style={{ padding: "8px" }}>
-          {/* Upload button — beveled, NOT rounded pill */}
+          {/* Upload button — aqua pill style */}
           <label
+            className="aqua-cta"
             style={{
-              ...styles.btn,
               display: "flex",
               width: "100%",
               alignItems: "center",
               justifyContent: "center",
               marginBottom: "8px",
               textAlign: "center" as const,
-              fontSize: "16px",
+              fontSize: "14px",
               boxSizing: "border-box" as const,
+              padding: "4px 16px",
             }}
           >
-            Upload Image
+            Upload Media
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,video/mp4,video/webm,video/quicktime"
               onChange={handleImageUpload}
               style={{ display: "none" }}
             />
@@ -1081,7 +1338,55 @@ export default function CanvasEditor({
           </span>
         </div>
 
+        {/* ─── Tab Bar ─── */}
+        <div
+          style={{
+            display: "flex",
+            background: MAC.bg,
+            borderBottom: "1px solid #808080",
+            padding: "0",
+          }}
+        >
+          <button
+            onClick={() => setActiveTab("canvas")}
+            style={{
+              flex: 1,
+              padding: "4px 0",
+              fontFamily: MAC.font,
+              fontSize: "14px",
+              border: "none",
+              borderRight: "1px solid #808080",
+              background: activeTab === "canvas" ? "#FFFFFF" : MAC.bg,
+              fontWeight: activeTab === "canvas" ? "bold" : "normal",
+              cursor: "pointer",
+              borderRadius: 0,
+              color: "#000",
+            }}
+          >
+            Canvas
+          </button>
+          <button
+            onClick={() => setActiveTab("beats")}
+            style={{
+              flex: 1,
+              padding: "4px 0",
+              fontFamily: MAC.font,
+              fontSize: "14px",
+              border: "none",
+              background: activeTab === "beats" ? "#FFFFFF" : MAC.bg,
+              fontWeight: activeTab === "beats" ? "bold" : "normal",
+              cursor: "pointer",
+              borderRadius: 0,
+              color: "#000",
+            }}
+          >
+            Beat Maker
+          </button>
+        </div>
+
         {/* Canvas area — sunken inset panel */}
+        {activeTab === "canvas" ? (
+        <>
         <div
           ref={containerRef}
           style={{
@@ -1132,93 +1437,193 @@ export default function CanvasEditor({
           <span>{diskMB} MB in disk</span>
           <span>888 MB available</span>
         </div>
+        </>
+        ) : (
+        <div style={{ flex: 1, display: "flex", minHeight: "500px", height: "100%" }}>
+          <BeatSequencer
+            ref={beatRef}
+            pattern={beatData}
+            onChange={(p) => { setBeatData(p); forceUpdate((n) => n + 1); }}
+            hideTransport
+          />
+        </div>
+        )}
         </div>
 
-        {/* ─── Bottom Toolbar (now directly under canvas) ─── */}
+        {/* ─── Bottom Toolbar ─── */}
         <div style={styles.toolbar}>
-          {/* Pointer tool */}
-          <button
-            onClick={() => setActiveTool("pointer")}
-            style={activeTool === "pointer" ? styles.btnActive : styles.btn}
-          >
-            Select
-          </button>
-
-          {/* Pencil tool */}
-        <button
-          onClick={() => setActiveTool("pencil")}
-          style={activeTool === "pencil" ? styles.btnActive : styles.btn}
-        >
-          Draw
-        </button>
-
-        {/* Eraser tool */}
-        <button
-          onClick={() => setActiveTool("eraser")}
-          style={activeTool === "eraser" ? styles.btnActive : styles.btn}
-        >
-          Eraser
-        </button>
-
-          {/* Color palette */}
-        {activeTool === "pencil" && (
-          <div style={styles.colorPalette}>
-            {colors.map((color) => (
+          {activeTab === "canvas" ? (
+            <>
+              {/* Pointer tool */}
               <button
-                  key={color}
-                  onClick={() => setBrushColor(color)}
-                  style={{
-                    ...(brushColor === color
-                      ? styles.colorSwatchActive
-                      : styles.colorSwatch),
-                    backgroundColor: color,
-                  }}
+                onClick={() => setActiveTool("pointer")}
+                style={activeTool === "pointer" ? styles.btnActive : styles.btn}
+              >
+                Select
+              </button>
+
+              {/* Pencil tool */}
+              <button
+                onClick={() => setActiveTool("pencil")}
+                style={activeTool === "pencil" ? styles.btnActive : styles.btn}
+              >
+                Draw
+              </button>
+
+              {/* Eraser tool */}
+              <button
+                onClick={() => setActiveTool("eraser")}
+                style={activeTool === "eraser" ? styles.btnActive : styles.btn}
+              >
+                Eraser
+              </button>
+
+              {/* Color palette */}
+              {activeTool === "pencil" && (
+                <div style={styles.colorPalette}>
+                  {colors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setBrushColor(color)}
+                      style={{
+                        ...(brushColor === color
+                          ? styles.colorSwatchActive
+                          : styles.colorSwatch),
+                        backgroundColor: color,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Brush size slider */}
+              {(activeTool === "pencil" || activeTool === "eraser") && (
+                <input
+                  type="range"
+                  min={1}
+                  max={20}
+                  value={brushSize}
+                  onChange={(e) => setBrushSize(Number(e.target.value))}
+                  style={{ width: "60px", cursor: "pointer" }}
                 />
-              ))}
-            </div>
-          )}
+              )}
 
-          {/* Brush size slider */}
-        {(activeTool === "pencil" || activeTool === "eraser") && (
-          <input
-            type="range"
-            min={1}
-              max={20}
-              value={brushSize}
-              onChange={(e) => setBrushSize(Number(e.target.value))}
-              style={{ width: "60px", cursor: "pointer" }}
-            />
+              {/* Divider */}
+              <div style={styles.toolbarDivider} />
+
+              {/* Delete */}
+              <button onClick={deleteSelected} style={styles.btn}>
+                Delete
+              </button>
+
+              {/* Undo */}
+              <button onClick={handleUndo} style={styles.btn}>
+                Undo
+              </button>
+
+              {/* Clean page */}
+              <button onClick={clearCanvas} style={styles.btn}>
+                Clean Page
+              </button>
+            </>
+          ) : (
+            <>
+              {/* ─── Beat Maker Controls ─── */}
+              {/* Play/Stop */}
+              <button
+                onClick={() => { beatRef.current?.play(); forceUpdate((n) => n + 1); }}
+                style={{
+                  ...styles.btn,
+                  width: 32,
+                  height: 32,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "16px",
+                  background: beatRef.current?.isPlaying ? "#FF6B9D" : "#FFD8F6",
+                  color: "#000",
+                }}
+              >
+                {beatRef.current?.isPlaying ? "■" : "▶"}
+              </button>
+
+              {/* BPM */}
+              <span style={{ fontFamily: "'VT323', Geneva, monospace", fontSize: "14px", color: "#000" }}>BPM:</span>
+              <input
+                type="range"
+                min={60}
+                max={200}
+                value={beatData.bpm}
+                onChange={(e) => { beatRef.current?.setBpm(Number(e.target.value)); }}
+                style={{ width: "60px", cursor: "pointer" }}
+              />
+              <span style={{ fontFamily: "'VT323', Geneva, monospace", fontSize: "14px", color: "#000", minWidth: "26px" }}>
+                {beatData.bpm}
+              </span>
+
+              <div style={styles.toolbarDivider} />
+
+              {/* Drums / Melody tabs */}
+              <button
+                onClick={() => { beatRef.current?.setActiveSection("drums"); forceUpdate((n) => n + 1); }}
+                style={{
+                  ...styles.btn,
+                  background: beatRef.current?.activeSection === "drums" ? "#FFF" : "#FFD8F6",
+                  fontWeight: beatRef.current?.activeSection === "drums" ? "bold" : "normal",
+                }}
+              >
+                Drums
+              </button>
+              <button
+                onClick={() => { beatRef.current?.setActiveSection("melody"); forceUpdate((n) => n + 1); }}
+                style={{
+                  ...styles.btn,
+                  background: beatRef.current?.activeSection === "melody" ? "#FFF" : "#E8A0FF",
+                  fontWeight: beatRef.current?.activeSection === "melody" ? "bold" : "normal",
+                }}
+              >
+                Melody
+              </button>
+
+              <div style={styles.toolbarDivider} />
+
+              {/* Clear */}
+              <button
+                onClick={() => beatRef.current?.clear()}
+                style={styles.btn}
+              >
+                Clear
+              </button>
+
+              {/* Record */}
+              <button
+                onClick={() => { beatRef.current?.record(); forceUpdate((n) => n + 1); }}
+                style={{
+                  ...styles.btn,
+                  background: beatRef.current?.isRecording ? "#FF4444" : "#FF8C42",
+                  color: "#FFF",
+                  cursor: beatRef.current?.isRecording ? "default" : "pointer",
+                }}
+                disabled={beatRef.current?.isRecording}
+              >
+                {beatRef.current?.isRecording
+                  ? (beatRef.current?.recordingCountdown ?? 0) > 0
+                    ? `${beatRef.current?.recordingCountdown}...`
+                    : "REC"
+                  : "Record"}
+              </button>
+            </>
           )}
 
           {/* Divider */}
           <div style={styles.toolbarDivider} />
 
-          {/* Delete */}
-          <button onClick={deleteSelected} style={styles.btn}>
-            Delete
-          </button>
-
-          {/* Undo */}
-        <button onClick={handleUndo} style={styles.btn}>
-          Undo
-        </button>
-
-        {/* Clean page */}
-        <button onClick={clearCanvas} style={styles.btn}>
-          Clean Page
-        </button>
-
-          {/* Divider */}
-          <div style={styles.toolbarDivider} />
-
-          {/* Save / Send */}
+          {/* Save / Send — always visible */}
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{
-              ...styles.btnPrimary,
-              ...(saving ? { opacity: 0.6 } : {}),
-            }}
+            className="aqua-cta"
+            style={{ padding: "3px 16px", fontSize: "14px" }}
           >
             {saving
               ? "Saving..."
@@ -1273,20 +1678,22 @@ export default function CanvasEditor({
                   readOnly
                   style={{ ...styles.input, fontSize: "14px" }}
                 />
-                <button onClick={copyLink} style={styles.btn}>
+                <button onClick={copyLink} className="aqua-cta" style={{ padding: "4px 16px", fontSize: "14px" }}>
                   Copy
                 </button>
               </div>
               <div style={{ display: "flex", width: "100%", gap: "8px" }}>
                 <button
                   onClick={handleShare}
-                  style={{ ...styles.btnPrimary, flex: 1 }}
+                  className="aqua-cta"
+                  style={{ flex: 1, padding: "6px 16px" }}
                 >
                   Share
                 </button>
                 <button
                   onClick={() => setShowSharePopup(false)}
-                  style={{ ...styles.btn, flex: 1 }}
+                  className="aqua-cta"
+                  style={{ flex: 1, padding: "6px 16px" }}
                 >
                   Close
                 </button>

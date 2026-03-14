@@ -15,6 +15,19 @@ export interface BombLayer {
   created_at: string;
 }
 
+export interface BeatPattern {
+  bpm: number;
+  steps: number;
+  tracks: BeatTrack[];
+}
+
+export interface BeatTrack {
+  name: string;
+  instrument: string;
+  pattern: boolean[];
+  volume: number;
+}
+
 export interface StickerCategory {
   name: string;
   stickers: StickerItem[];

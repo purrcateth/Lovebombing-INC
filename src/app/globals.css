@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Apple Garamond Light';
+  src: url('/fonts/AppleGaramond-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --mac-white: #FFFFFF;
   --mac-black: #000000;
@@ -91,4 +99,33 @@ body {
 
 .lb-btn-secondary:active {
   border-style: inset;
+}
+
+/* Aqua pill CTA button — used across all pages */
+.aqua-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 32px;
+  border: none;
+  border-radius: 50px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, #c8ddf0 25%, #a8c8e8 50%, #93b8dd 65%, #b0cce8 85%, #d0e2f4 100%);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08), inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -1px 1px rgba(100,140,180,0.3);
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a4e;
+  letter-spacing: 0.3px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.aqua-cta:active {
+  background: linear-gradient(180deg, #b0cce8 0%, #93b8dd 30%, #a8c8e8 50%, #c8ddf0 80%, rgba(255,255,255,0.7) 100%);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1), inset 0 1px 2px rgba(100,140,180,0.3);
+}
+
+.aqua-cta:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

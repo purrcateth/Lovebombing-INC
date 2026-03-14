@@ -74,7 +74,7 @@ export default async function BombPage({ params }: PageProps) {
             width: "100%",
             maxWidth: "480px",
             border: "2px solid #000",
-            background: "#C0C0C0",
+            background: "#FFD8F6",
             boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
           }}
         >
@@ -83,7 +83,7 @@ export default async function BombPage({ params }: PageProps) {
             style={{
               height: "24px",
               background:
-                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #FFD8F6 1px, #FFD8F6 2px)",
               borderBottom: "2px solid #000",
               display: "flex",
               alignItems: "center",
@@ -95,7 +95,7 @@ export default async function BombPage({ params }: PageProps) {
                 width: "12px",
                 height: "12px",
                 border: "1px solid #000",
-                background: "#C0C0C0",
+                background: "#FFD8F6",
               }}
             />
             <span
@@ -134,19 +134,7 @@ export default async function BombPage({ params }: PageProps) {
               Try sending a fresh one to someone special.
             </p>
             <div style={{ marginTop: "16px" }}>
-              <Link
-                href="/create"
-                style={{
-                  padding: "6px 20px",
-                  border: "2px outset #DFDFDF",
-                  background: "#C0C0C0",
-                  fontFamily: "'VT323', monospace",
-                  fontSize: "16px",
-                  color: "#000",
-                  textDecoration: "none",
-                  fontWeight: "bold",
-                }}
-              >
+              <Link href="/create" className="aqua-cta">
                 Create your own
               </Link>
             </div>
@@ -157,14 +145,14 @@ export default async function BombPage({ params }: PageProps) {
   }
 
   return (
-    <main className="bg-canvas" style={{ padding: "20px 20px 40px", minHeight: "100vh" }}>
+    <main className="bg-canvas" style={{ padding: "20px", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
       {/* Mac Finder Window */}
       <div
         style={{
+          width: "100%",
           maxWidth: "700px",
-          margin: "0 auto",
           border: "2px solid #000",
-          background: "#C0C0C0",
+          background: "#FFD8F6",
           boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
         }}
       >
@@ -173,7 +161,7 @@ export default async function BombPage({ params }: PageProps) {
           style={{
             height: "24px",
             background:
-              "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #C0C0C0 1px, #C0C0C0 2px)",
+              "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #FFD8F6 1px, #FFD8F6 2px)",
             borderBottom: "2px solid #000",
             display: "flex",
             alignItems: "center",
@@ -185,7 +173,7 @@ export default async function BombPage({ params }: PageProps) {
               width: "12px",
               height: "12px",
               border: "1px solid #000",
-              background: "#C0C0C0",
+              background: "#FFD8F6",
             }}
           />
           <span
@@ -197,7 +185,7 @@ export default async function BombPage({ params }: PageProps) {
               fontWeight: "bold",
             }}
           >
-            A lovebomb from {bomb.creator_name}
+            你收到了一份特别的礼物
           </span>
         </div>
 
@@ -206,18 +194,20 @@ export default async function BombPage({ params }: PageProps) {
           <div style={{ textAlign: "center", marginBottom: "16px" }}>
             <h1
               style={{
-                fontFamily: "Georgia, serif",
-                fontWeight: "bold",
-                color: "#1a1a6e",
-                fontSize: "32px",
+                fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, 'Times New Roman', serif",
+                fontWeight: 300,
+                fontStyle: "normal",
+                color: "#000066",
+                fontSize: "40px",
                 margin: 0,
+                textShadow: "-2px 3px 6px rgba(0,0,0,0.25), 0px 2px 3px rgba(0,0,0,0.25)",
               }}
             >
               A lovebomb from {bomb.creator_name}
             </h1>
           </div>
 
-          <BombViewer canvasJson={bomb.canvas_json} layers={bomb.layers || []} />
+          <BombViewer canvasJson={bomb.canvas_json} layers={bomb.layers || []} beatData={bomb.beat_data} />
 
           <div
             style={{
@@ -228,33 +218,10 @@ export default async function BombPage({ params }: PageProps) {
               marginTop: "16px",
             }}
           >
-            <Link
-              href={`/bomb/${id}/add`}
-              style={{
-                padding: "6px 20px",
-                border: "2px outset #DFDFDF",
-                background: "#C0C0C0",
-                fontFamily: "'VT323', monospace",
-                fontSize: "16px",
-                color: "#000",
-                textDecoration: "none",
-                fontWeight: "bold",
-              }}
-            >
+            <Link href={`/bomb/${id}/add`} className="aqua-cta">
               Add Your Lovebombs
             </Link>
-            <Link
-              href="/create"
-              style={{
-                padding: "6px 20px",
-                border: "2px outset #DFDFDF",
-                background: "#FFFFFF",
-                fontFamily: "'VT323', monospace",
-                fontSize: "16px",
-                color: "#000",
-                textDecoration: "none",
-              }}
-            >
+            <Link href="/create" className="aqua-cta">
               Create Your Own
             </Link>
           </div>
