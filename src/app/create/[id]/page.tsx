@@ -4,12 +4,64 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import CanvasEditor from "@/components/CanvasEditor";
 
+const TOTAL_HEARTS = 10;
+const HEART_INTERVAL = 200; // ms per heart
+
+function HeartProgressBar() {
+  const [filledHearts, setFilledHearts] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFilledHearts((prev) => {
+        if (prev >= TOTAL_HEARTS) {
+          clearInterval(timer);
+          return TOTAL_HEARTS;
+        }
+        return prev + 1;
+      });
+    }, HEART_INTERVAL);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "4px",
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: "24px",
+      }}
+    >
+      {Array.from({ length: TOTAL_HEARTS }, (_, i) => (
+        <span
+          key={i}
+          style={{
+            fontSize: "22px",
+            transition: "all 0.3s ease-out",
+            opacity: i < filledHearts ? 1 : 0.2,
+            transform: i < filledHearts ? "scale(1)" : "scale(0.7)",
+            filter: i < filledHearts ? "none" : "grayscale(1)",
+          }}
+        >
+          {i < filledHearts ? "💗" : "🤍"}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function CanvasPage() {
   const params = useParams();
   const id = params.id as string;
   const [creatorName, setCreatorName] = useState<string | null>(null);
   const [dataReady, setDataReady] = useState(false);
   const [showCanvas, setShowCanvas] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
 
   useEffect(() => {
     const fetchBomb = async () => {
@@ -27,12 +79,12 @@ export default function CanvasPage() {
     fetchBomb();
   }, [id]);
 
-  // Show loading screen for at least 2 seconds, then fade to canvas
+  // Show loading for at least 2.2s (hearts fill up), then fade to canvas
   useEffect(() => {
     if (!dataReady) return;
     const timer = setTimeout(() => {
       setShowCanvas(true);
-    }, 2000);
+    }, TOTAL_HEARTS * HEART_INTERVAL + 300);
     return () => clearTimeout(timer);
   }, [dataReady]);
 
@@ -46,18 +98,22 @@ export default function CanvasPage() {
           alignItems: "center",
           justifyContent: "center",
           padding: "20px",
+          opacity: mounted ? 1 : 0,
+          transition: "opacity 0.5s ease-out",
         }}
       >
         <div
-          className="page-window"
           style={{
             background: "#FFD8F6",
             border: "2px solid #000",
             textAlign: "center",
             boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
-            maxWidth: 380,
+            maxWidth: 400,
             width: "100%",
             position: "relative",
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.5s ease-out 0.1s, transform 0.5s ease-out 0.1s",
           }}
         >
           {/* Title bar */}
@@ -108,36 +164,15 @@ export default function CanvasPage() {
               Preparing your canvas...
             </p>
 
-            {/* Progress bar */}
-            <div
-              style={{
-                marginTop: "24px",
-                width: "100%",
-                height: "18px",
-                border: "2px solid #000",
-                background: "#FFF",
-                position: "relative",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  bottom: 0,
-                  background: "repeating-linear-gradient(90deg, #6699CC 0px, #6699CC 8px, #4477AA 8px, #4477AA 16px)",
-                  animation: "progressFill 2s ease-in-out forwards",
-                }}
-              />
-            </div>
+            {/* Heart progress bar */}
+            <HeartProgressBar />
 
             <p
               style={{
                 fontFamily: "'VT323', monospace",
                 fontSize: "14px",
                 color: "#808080",
-                marginTop: "12px",
+                marginTop: "16px",
               }}
             >
               Loading stickers, brushes, and sounds...
@@ -149,7 +184,12 @@ export default function CanvasPage() {
   }
 
   return (
-    <div className="canvas-fade-in">
+    <div
+      style={{
+        opacity: 1,
+        animation: "pageFadeIn 0.8s ease-out both",
+      }}
+    >
       <CanvasEditor bombId={id} creatorName={creatorName || "Anonymous"} />
     </div>
   );

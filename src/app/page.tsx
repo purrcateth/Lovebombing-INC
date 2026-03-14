@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  // Trigger fade-in on mount (works with both refresh and client navigation)
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,11 +42,12 @@ export default function Home() {
         alignItems: "center",
         justifyContent: "center",
         padding: "20px",
+        opacity: mounted ? 1 : 0,
+        transition: "opacity 0.7s ease-out",
       }}
     >
       {/* Pink window */}
       <div
-        className="page-window"
         style={{
           width: "100%",
           maxWidth: "520px",
@@ -51,6 +58,9 @@ export default function Home() {
           overflow: "hidden",
           padding: "32px 44px 40px",
           textAlign: "center",
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? "translateY(0)" : "translateY(20px)",
+          transition: "opacity 0.6s ease-out 0.15s, transform 0.6s ease-out 0.15s",
         }}
       >
         {/* Inner highlight lines (top + left = white) */}
@@ -71,6 +81,9 @@ export default function Home() {
             lineHeight: "normal",
             margin: 0,
             textShadow: "-3.5px 6px 12px rgba(0,0,0,0.25), 0px 4.5px 4.5px rgba(0,0,0,0.25)",
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(12px)",
+            transition: "opacity 0.5s ease-out 0.3s, transform 0.5s ease-out 0.3s",
           }}
         >
           Lovebombing
@@ -86,13 +99,23 @@ export default function Home() {
             margin: "16px 0 0",
             whiteSpace: "nowrap",
             textShadow: "0px 0px 1px #262626, 0px 0px 1px #262626",
+            opacity: mounted ? 1 : 0,
+            transition: "opacity 0.5s ease-out 0.5s",
           }}
         >
           Bomb your loved ones.Or your haters.
         </p>
 
         {/* Name input row */}
-        <form onSubmit={handleSubmit} style={{ marginTop: "52px" }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            marginTop: "52px",
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(10px)",
+            transition: "opacity 0.5s ease-out 0.6s, transform 0.5s ease-out 0.6s",
+          }}
+        >
           <div
             style={{
               display: "flex",
