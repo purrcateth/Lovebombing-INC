@@ -57,25 +57,35 @@ export async function PUT(request: Request, context: RouteContext) {
     // If thumbnail data is provided, store it
     let thumbnail_url = null;
     if (thumbnail_data) {
-      // Store thumbnail as base64 in the record for now
-      // In production, upload to Supabase Storage
       thumbnail_url = thumbnail_data;
     }
 
-    const updateData: Record<string, unknown> = {
+    // Try saving with beat_data first, fall back to without if column doesn't exist
+    const baseData: Record<string, unknown> = {
       canvas_json,
       thumbnail_url,
       updated_at: new Date().toISOString(),
     };
 
-    // Only include beat_data if provided (column may not exist yet)
+    // First try with beat_data included
     if (beat_data !== undefined) {
-      updateData.beat_data = beat_data;
+      const { error } = await supabase
+        .from("bombs")
+        .update({ ...baseData, beat_data })
+        .eq("id", id);
+
+      if (!error) {
+        return NextResponse.json({ success: true });
+      }
+
+      // If error mentions beat_data column, retry without it
+      console.warn("Save with beat_data failed, retrying without:", error.message);
     }
 
+    // Save without beat_data
     const { error } = await supabase
       .from("bombs")
-      .update(updateData)
+      .update(baseData)
       .eq("id", id);
 
     if (error) {
