@@ -507,6 +507,7 @@ export default function CanvasEditor({
   const creatorBeatRef = useRef<BeatSequencerHandle>(null);
   const [, forceUpdate] = useState(0); // force re-render when beat state changes
   const hasCreatorBeat = !!(creatorBeatData && creatorBeatData.tracks.some((t) => t.pattern.some(Boolean)));
+  const [creatorBeatOpen, setCreatorBeatOpen] = useState(false);
   const animationFrameRef = useRef<number | null>(null);
 
   const stopAnimationLoop = useCallback(() => {
@@ -1371,9 +1372,10 @@ export default function CanvasEditor({
         </>
         ) : (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "500px", height: "100%" }}>
-          {/* Creator's beat (read-only) — shown when in collaborative mode */}
+          {/* Creator's beat accordion — shown when in collaborative mode */}
           {isCollaborative && hasCreatorBeat && creatorBeatData && (
-            <div style={{ borderBottom: "2px solid #808080" }}>
+            <div style={{ borderBottom: "2px solid #808080", flexShrink: 0 }}>
+              {/* Accordion header — play button always visible */}
               <div
                 style={{
                   display: "flex",
@@ -1381,11 +1383,15 @@ export default function CanvasEditor({
                   gap: "8px",
                   padding: "6px 10px",
                   background: "#f0d8ec",
-                  borderBottom: "1px solid #ccc",
+                  borderBottom: creatorBeatOpen ? "1px solid #ccc" : "none",
+                  cursor: "pointer",
+                  userSelect: "none",
                 }}
+                onClick={() => setCreatorBeatOpen(!creatorBeatOpen)}
               >
+                {/* Play/Stop — prevent accordion toggle */}
                 <button
-                  onClick={() => { creatorBeatRef.current?.play(); forceUpdate((n) => n + 1); }}
+                  onClick={(e) => { e.stopPropagation(); creatorBeatRef.current?.play(); forceUpdate((n) => n + 1); }}
                   style={{
                     width: 28,
                     height: 28,
@@ -1398,6 +1404,7 @@ export default function CanvasEditor({
                     fontSize: "14px",
                     fontFamily: "'VT323', monospace",
                     borderRadius: 0,
+                    flexShrink: 0,
                   }}
                 >
                   {creatorBeatRef.current?.isPlaying ? "■" : "▶"}
@@ -1408,20 +1415,27 @@ export default function CanvasEditor({
                 <span style={{ fontFamily: "'VT323', monospace", fontSize: "12px", color: "#808080" }}>
                   (read-only)
                 </span>
+                {/* Accordion arrow */}
+                <span style={{ marginLeft: "auto", fontSize: "12px", color: "#808080", fontFamily: "'VT323', monospace" }}>
+                  {creatorBeatOpen ? "▼" : "▶"}
+                </span>
               </div>
-              <div style={{ maxHeight: "200px", overflow: "auto" }}>
-                <BeatSequencer
-                  ref={creatorBeatRef}
-                  pattern={creatorBeatData}
-                  onChange={() => {}}
-                  readOnly
-                  hideTransport
-                />
-              </div>
+              {/* Accordion body — collapsible */}
+              {creatorBeatOpen && (
+                <div style={{ maxHeight: "220px", overflow: "auto" }}>
+                  <BeatSequencer
+                    ref={creatorBeatRef}
+                    pattern={creatorBeatData}
+                    onChange={() => {}}
+                    readOnly
+                    hideTransport
+                  />
+                </div>
+              )}
             </div>
           )}
 
-          {/* User's own beat (editable) */}
+          {/* User's own beat label */}
           {isCollaborative && hasCreatorBeat && (
             <div
               style={{
@@ -1431,6 +1445,7 @@ export default function CanvasEditor({
                 padding: "6px 10px",
                 background: "#d8ecf0",
                 borderBottom: "1px solid #ccc",
+                flexShrink: 0,
               }}
             >
               <span style={{ fontFamily: "'ChiKareGo2', 'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "bold" }}>
@@ -1688,10 +1703,11 @@ export default function CanvasEditor({
               <h2
                 style={{
                   margin: 0,
-                  fontSize: "24px",
-                  fontWeight: "bold",
-                  color: "#1a1a6e",
-                  fontFamily: "Georgia, serif",
+                  fontSize: "28px",
+                  fontWeight: 300,
+                  color: "#000066",
+                  fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
+                  textShadow: "-2px 3px 6px rgba(0,0,0,0.15)",
                 }}
               >
                 Lovebomb saved!
@@ -1701,7 +1717,7 @@ export default function CanvasEditor({
                   margin: 0,
                   fontSize: "16px",
                   color: "#000000",
-                  fontFamily: MAC.font,
+                  fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
                 }}
               >
                 Share this link with someone special:
