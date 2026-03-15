@@ -140,7 +140,7 @@ export default function CanvasPage() {
               style={{
                 flex: 1,
                 textAlign: "center",
-                fontFamily: "'VT323', monospace",
+                fontFamily: "'ChiKareGo2', 'VT323', monospace",
                 fontSize: "14px",
                 fontWeight: "bold",
               }}

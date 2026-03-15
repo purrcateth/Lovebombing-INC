@@ -208,7 +208,7 @@ const styles = {
     whiteSpace: "nowrap" as const,
     overflow: "hidden" as const,
     textOverflow: "ellipsis" as const,
-    fontFamily: MAC.font,
+    fontFamily: "'ChiKareGo2', 'VT323', 'Geneva', monospace",
   },
   titleCounter: {
     fontSize: "14px",
@@ -305,7 +305,7 @@ const styles = {
     borderBottom: `2px solid ${MAC.borderDark}`,
     fontSize: "16px",
     fontWeight: "bold" as const,
-    fontFamily: MAC.font,
+    fontFamily: "'ChiKareGo2', 'VT323', 'Geneva', monospace",
     color: "#000000",
     userSelect: "none" as const,
     position: "sticky" as const,
@@ -1402,7 +1402,7 @@ export default function CanvasEditor({
                 >
                   {creatorBeatRef.current?.isPlaying ? "■" : "▶"}
                 </button>
-                <span style={{ fontFamily: "'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "bold" }}>
+                <span style={{ fontFamily: "'ChiKareGo2', 'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "bold" }}>
                   Creator&apos;s Beat
                 </span>
                 <span style={{ fontFamily: "'VT323', monospace", fontSize: "12px", color: "#808080" }}>
@@ -1433,7 +1433,7 @@ export default function CanvasEditor({
                 borderBottom: "1px solid #ccc",
               }}
             >
-              <span style={{ fontFamily: "'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "bold" }}>
+              <span style={{ fontFamily: "'ChiKareGo2', 'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "bold" }}>
                 Your Beat
               </span>
               <span style={{ fontFamily: "'VT323', monospace", fontSize: "12px", color: "#808080" }}>

@@ -28,6 +28,7 @@ const objectHasAnimation = (obj: fabric.FabricObject) => {
 };
 
 const MAC_FONT = "'VT323', 'Geneva', monospace";
+const TITLE_FONT = "'ChiKareGo2', 'VT323', 'Geneva', monospace";
 
 // Check if canvas has actual user content (not just empty/default)
 function canvasHasContent(canvasJson: object): boolean {
@@ -243,7 +244,7 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
               style={{
                 flex: 1,
                 textAlign: "center",
-                fontFamily: MAC_FONT,
+                fontFamily: TITLE_FONT,
                 fontSize: "16px",
                 fontWeight: "bold",
               }}
