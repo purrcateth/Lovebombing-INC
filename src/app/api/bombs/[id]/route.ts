@@ -30,7 +30,16 @@ export async function GET(_request: Request, context: RouteContext) {
       .eq("bomb_id", id)
       .order("created_at", { ascending: true });
 
-    return NextResponse.json({ ...bomb, layers: layers || [] });
+    // Extract beat_data: check dedicated column first, then embedded in canvas_json
+    let beat_data = bomb.beat_data ?? null;
+    if (!beat_data && bomb.canvas_json && typeof bomb.canvas_json === "object") {
+      const cj = bomb.canvas_json as Record<string, unknown>;
+      if (cj._beat_data) {
+        beat_data = cj._beat_data;
+      }
+    }
+
+    return NextResponse.json({ ...bomb, beat_data, layers: layers || [] });
   } catch (err) {
     console.error("Get bomb error:", err);
     return NextResponse.json(
@@ -60,14 +69,20 @@ export async function PUT(request: Request, context: RouteContext) {
       thumbnail_url = thumbnail_data;
     }
 
-    // Try saving with beat_data first, fall back to without if column doesn't exist
+    // Embed beat_data inside canvas_json so it persists even without a dedicated column
+    const canvasWithBeat = { ...canvas_json };
+    if (beat_data) {
+      canvasWithBeat._beat_data = beat_data;
+    }
+
+    // Try saving with beat_data column first, fall back to without
     const baseData: Record<string, unknown> = {
-      canvas_json,
+      canvas_json: canvasWithBeat,
       thumbnail_url,
       updated_at: new Date().toISOString(),
     };
 
-    // First try with beat_data included
+    // First try with dedicated beat_data column
     if (beat_data !== undefined) {
       const { error } = await supabase
         .from("bombs")
@@ -78,11 +93,11 @@ export async function PUT(request: Request, context: RouteContext) {
         return NextResponse.json({ success: true });
       }
 
-      // If error mentions beat_data column, retry without it
-      console.warn("Save with beat_data failed, retrying without:", error.message);
+      // Column doesn't exist — save without it (beat_data is still embedded in canvas_json)
+      console.warn("Save with beat_data column failed, using canvas_json embed:", error.message);
     }
 
-    // Save without beat_data
+    // Save without beat_data column — beat is embedded in canvas_json
     const { error } = await supabase
       .from("bombs")
       .update(baseData)

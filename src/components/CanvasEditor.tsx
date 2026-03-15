@@ -1031,12 +1031,14 @@ export default function CanvasEditor({
       (obj) => !(obj as fabric.FabricObject & Record<string, boolean>)[LOCKED_KEY]
     );
 
-    if (isCollaborative && userObjects.length === 0) {
-      alert("Add something to the canvas first!");
+    const hasBeatContent = beatData.tracks.some((t) => t.pattern.some(Boolean));
+
+    if (isCollaborative && userObjects.length === 0 && !hasBeatContent) {
+      alert("Add something to the canvas or make a beat first!");
       return;
     }
-    if (!isCollaborative && canvas.getObjects().length === 0) {
-      alert("Add something to the canvas first!");
+    if (!isCollaborative && canvas.getObjects().length === 0 && !hasBeatContent) {
+      alert("Add something to the canvas or make a beat first!");
       return;
     }
 

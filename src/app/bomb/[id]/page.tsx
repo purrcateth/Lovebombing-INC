@@ -23,7 +23,16 @@ async function getBomb(id: string) {
       .eq("bomb_id", id)
       .order("created_at", { ascending: true });
 
-    return { ...bomb, layers: layers || [] };
+    // Extract beat_data: check dedicated column first, then embedded in canvas_json
+    let beat_data = bomb.beat_data ?? null;
+    if (!beat_data && bomb.canvas_json && typeof bomb.canvas_json === "object") {
+      const cj = bomb.canvas_json as Record<string, unknown>;
+      if (cj._beat_data) {
+        beat_data = cj._beat_data;
+      }
+    }
+
+    return { ...bomb, beat_data, layers: layers || [] };
   } catch {
     return null;
   }
@@ -241,7 +250,7 @@ export default async function BombPage({ params }: PageProps) {
             }}
           >
             <Link href={`/bomb/${id}/add`} className="aqua-cta">
-              💗 Add Your Lovebombs
+              Add Your Lovebombs
             </Link>
             <Link href="/" className="aqua-cta">
               Create Your Own
