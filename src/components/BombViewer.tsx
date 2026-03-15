@@ -12,7 +12,6 @@ interface BombViewerProps {
 }
 
 const CANVAS_SIZE = 1080;
-const ANIMATED_KEY = "_isAnimatedSticker";
 
 const isGifSource = (src?: string) => Boolean(src && /(^data:image\/gif|\.gif($|\?))/i.test(src));
 
@@ -30,16 +29,31 @@ const objectHasAnimation = (obj: fabric.FabricObject) => {
 
 const MAC_FONT = "'VT323', 'Geneva', monospace";
 
+// Check if canvas has actual user content (not just empty/default)
+function canvasHasContent(canvasJson: object): boolean {
+  const cj = canvasJson as { objects?: unknown[]; _beat_data?: unknown };
+  if (!cj.objects || !Array.isArray(cj.objects)) return false;
+  // Filter out internal keys — only count real objects
+  return cj.objects.length > 0;
+}
+
 export default function BombViewer({ canvasJson, layers, beatData }: BombViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const beatContainerRef = useRef<HTMLDivElement>(null);
+  const beatGridRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const beatRef = useRef<BeatSequencerHandle>(null);
   const [scale, setScale] = useState(1);
+  const [beatScale, setBeatScale] = useState(1);
+  const [beatGridHeight, setBeatGridHeight] = useState<number | null>(null);
   const [, forceUpdate] = useState(0);
 
+  const hasCanvas = canvasHasContent(canvasJson) || layers.length > 0;
+  const hasBeat = !!(beatData && beatData.tracks.some((t) => t.pattern.some(Boolean)));
+
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!hasCanvas || !canvasRef.current) return;
 
     const canvas = new fabric.StaticCanvas(canvasRef.current, {
       width: CANVAS_SIZE,
@@ -71,7 +85,6 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
     const loadCanvas = async () => {
       await canvas.loadFromJSON(canvasJson);
 
-      // Load collaborative layers on top
       for (const layer of layers) {
         if (!layer.canvas_json) continue;
         const layerData = layer.canvas_json as { objects?: object[] };
@@ -104,7 +117,6 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
     const handleResize = () => {
       if (!containerRef.current) return;
       const containerWidth = containerRef.current.clientWidth;
-      // Much bigger display — up to 800px on desktop
       const maxDisplaySize = Math.min(containerWidth, 800);
       const newScale = maxDisplaySize / CANVAS_SIZE;
       setScale(newScale);
@@ -118,63 +130,100 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
       stopAnimationLoop();
       canvas.dispose();
     };
-  }, [canvasJson, layers]);
+  }, [canvasJson, layers, hasCanvas]);
 
-  const hasBeat = beatData && beatData.tracks.some((t) => t.pattern.some(Boolean));
+  // Scale beat grid to fit container
+  useEffect(() => {
+    if (!hasBeat || !beatContainerRef.current) return;
+
+    const handleBeatResize = () => {
+      if (!beatContainerRef.current) return;
+      const containerWidth = beatContainerRef.current.clientWidth;
+      // Beat grid natural width: label(72) + padding(24) + 16 cells(44) + 15 gaps(3) + 3 group gaps(8) = ~869px
+      const beatNaturalWidth = 72 + 24 + 16 * 44 + 15 * 3 + 3 * 8;
+      if (containerWidth < beatNaturalWidth) {
+        setBeatScale(containerWidth / beatNaturalWidth);
+      } else {
+        setBeatScale(1);
+      }
+
+      // Measure actual beat grid height for proper container sizing
+      if (beatGridRef.current) {
+        setBeatGridHeight(beatGridRef.current.scrollHeight);
+      }
+    };
+
+    // Small delay to let the beat grid render first
+    const timer = setTimeout(handleBeatResize, 100);
+    window.addEventListener("resize", handleBeatResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", handleBeatResize);
+    };
+  }, [hasBeat]);
 
   const handlePlayBeat = useCallback(() => {
     if (beatRef.current) {
       beatRef.current.play();
-      // Force re-render to update button state
       setTimeout(() => forceUpdate((n) => n + 1), 50);
     }
   }, []);
 
   const isPlaying = beatRef.current?.isPlaying ?? false;
 
+  // Nothing to show
+  if (!hasCanvas && !hasBeat) {
+    return null;
+  }
+
   return (
     <div style={{ width: "100%" }}>
-      <div
-        ref={containerRef}
-        style={{
-          display: "flex",
-          width: "100%",
-          justifyContent: "center",
-        }}
-      >
+      {/* Canvas — only if there are actual objects */}
+      {hasCanvas && (
         <div
+          ref={containerRef}
           style={{
-            padding: 0,
-            background: "#FFFFFF",
-            border: "2px inset #DFDFDF",
+            display: "flex",
+            width: "100%",
+            justifyContent: "center",
           }}
         >
           <div
             style={{
-              width: CANVAS_SIZE * scale,
-              height: CANVAS_SIZE * scale,
-              overflow: "hidden",
+              padding: 0,
+              background: "#FFFFFF",
+              border: "2px inset #DFDFDF",
             }}
           >
-            <canvas
-              ref={canvasRef}
+            <div
               style={{
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
+                width: CANVAS_SIZE * scale,
+                height: CANVAS_SIZE * scale,
+                overflow: "hidden",
               }}
-            />
+            >
+              <canvas
+                ref={canvasRef}
+                style={{
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top left",
+                }}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Beat playback section */}
       {hasBeat && beatData && (
         <div
+          ref={beatContainerRef}
           style={{
-            marginTop: "16px",
+            marginTop: hasCanvas ? "16px" : 0,
             border: "2px solid #000",
             background: "#FFD8F6",
             boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+            overflow: "hidden",
           }}
         >
           {/* Title bar */}
@@ -199,7 +248,7 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
                 fontWeight: "bold",
               }}
             >
-              🎵 Beat
+              Beat
             </span>
           </div>
 
@@ -253,15 +302,30 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
             </span>
           </div>
 
-          {/* Beat grid */}
-          <div style={{ maxHeight: "300px", overflow: "auto" }}>
-            <BeatSequencer
-              ref={beatRef}
-              pattern={beatData}
-              onChange={() => {}}
-              readOnly
-              hideTransport
-            />
+          {/* Beat grid — scaled to fit without horizontal scroll */}
+          <div
+            style={{
+              overflow: "hidden",
+              height: beatGridHeight && beatScale < 1
+                ? `${beatGridHeight * beatScale}px`
+                : "auto",
+            }}
+          >
+            <div
+              ref={beatGridRef}
+              style={{
+                transform: beatScale < 1 ? `scale(${beatScale})` : "none",
+                transformOrigin: "top left",
+              }}
+            >
+              <BeatSequencer
+                ref={beatRef}
+                pattern={beatData}
+                onChange={() => {}}
+                readOnly
+                hideTransport
+              />
+            </div>
           </div>
         </div>
       )}
