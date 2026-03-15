@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import CanvasEditor from "@/components/CanvasEditor";
+import type { BeatPattern } from "@/lib/types";
 
 export default function AddToBombPage() {
   const params = useParams();
@@ -14,9 +15,16 @@ export default function AddToBombPage() {
   const [bomb, setBomb] = useState<{
     canvas_json: object;
     layers: { canvas_json: object }[];
+    beat_data?: BeatPattern | null;
+    creator_name?: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
 
   useEffect(() => {
     const fetchBomb = async () => {
@@ -139,7 +147,7 @@ export default function AddToBombPage() {
               This lovebomb doesn&apos;t exist
             </h1>
             <div style={{ marginTop: "16px" }}>
-              <Link href="/create" className="aqua-cta">
+              <Link href="/" className="aqua-cta">
                 Create Your Own
               </Link>
             </div>
@@ -159,6 +167,8 @@ export default function AddToBombPage() {
           alignItems: "center",
           justifyContent: "center",
           padding: "20px",
+          opacity: mounted ? 1 : 0,
+          transition: "opacity 0.5s ease-out",
         }}
       >
         <div
@@ -168,6 +178,9 @@ export default function AddToBombPage() {
             border: "2px solid #000",
             background: "#FFD8F6",
             boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.5s ease-out 0.1s, transform 0.5s ease-out 0.1s",
           }}
         >
           {/* Pinstriped title bar */}
@@ -199,7 +212,7 @@ export default function AddToBombPage() {
                 fontWeight: "bold",
               }}
             >
-              Collaborative Mode
+              Lovebombing, INC.
             </span>
           </div>
 
@@ -207,59 +220,91 @@ export default function AddToBombPage() {
           <div style={{ padding: "30px 24px", textAlign: "center" }}>
             <h1
               style={{
-                fontFamily: "Georgia, serif",
-                fontWeight: "bold",
-                color: "#1a1a6e",
-                fontSize: "28px",
+                fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
+                fontWeight: 300,
+                color: "#000066",
+                fontSize: "32px",
                 margin: 0,
+                textShadow: "-2px 3px 6px rgba(0,0,0,0.15)",
               }}
             >
               Add Your Lovebombs
             </h1>
-            <p
-              style={{
-                fontFamily: "'VT323', monospace",
-                fontSize: "16px",
-                color: "#000",
-                marginTop: "8px",
-              }}
-            >
-              What&apos;s your name?
-            </p>
+            {bomb?.creator_name && (
+              <p
+                style={{
+                  fontFamily: "'VT323', monospace",
+                  fontSize: "16px",
+                  color: "#808080",
+                  marginTop: "8px",
+                }}
+              >
+                Add your love to {bomb.creator_name}&apos;s lovebomb
+              </p>
+            )}
 
             <form
-              style={{ marginTop: "16px", textAlign: "left" }}
+              style={{ marginTop: "24px" }}
               onSubmit={(e) => {
                 e.preventDefault();
                 if (name.trim()) setNameSubmitted(true);
               }}
             >
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={30}
-                autoFocus
+              <div
                 style={{
-                  width: "100%",
-                  padding: "4px 8px",
-                  fontFamily: "'VT323', monospace",
-                  fontSize: "16px",
-                  background: "#FFFFFF",
-                  border: "2px inset #DFDFDF",
-                  outline: "none",
-                  boxSizing: "border-box",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  justifyContent: "center",
                 }}
-                placeholder="Type your name"
-              />
-              <button
-                type="submit"
-                disabled={!name.trim()}
-                className="aqua-cta"
-                style={{ width: "100%", marginTop: "12px" }}
               >
-                Let&apos;s go
-              </button>
+                <label
+                  htmlFor="collab-name"
+                  style={{
+                    fontFamily: "'VT323', monospace",
+                    fontSize: 22,
+                    color: "#262626",
+                    whiteSpace: "nowrap",
+                    letterSpacing: "1.8px",
+                  }}
+                >
+                  Name:
+                </label>
+                <input
+                  id="collab-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={30}
+                  autoFocus
+                  style={{
+                    flex: 1,
+                    maxWidth: "280px",
+                    height: "34px",
+                    background: "#FFFFFF",
+                    border: "1px solid #000000",
+                    outline: "none",
+                    fontFamily: "'VT323', monospace",
+                    fontSize: 20,
+                    padding: "0 6px",
+                    boxSizing: "border-box",
+                  }}
+                  placeholder="Type your name"
+                />
+              </div>
+              <div style={{ marginTop: "24px" }}>
+                <button
+                  type="submit"
+                  disabled={!name.trim()}
+                  className="aqua-cta"
+                  style={{
+                    padding: "8px 32px",
+                    opacity: !name.trim() ? 0.5 : 1,
+                  }}
+                >
+                  Let&apos;s go
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -274,6 +319,7 @@ export default function AddToBombPage() {
       isCollaborative
       backgroundCanvasJson={bomb?.canvas_json || null}
       backgroundLayers={bomb?.layers?.map((l) => l.canvas_json) || []}
+      creatorBeatData={bomb?.beat_data || null}
     />
   );
 }

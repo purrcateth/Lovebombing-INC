@@ -146,13 +146,23 @@ export default async function BombPage({ params }: PageProps) {
   }
 
   return (
-    <main className="bg-canvas" style={{ padding: "20px", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      {/* Mac Finder Window */}
+    <main
+      className="bg-canvas"
+      style={{
+        padding: "20px",
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        paddingTop: "40px",
+      }}
+    >
+      {/* Mac Finder Window — wider for bigger canvas */}
       <div
         className="page-window"
         style={{
           width: "100%",
-          maxWidth: "700px",
+          maxWidth: "900px",
           border: "2px solid #000",
           background: "#FFD8F6",
           boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
@@ -187,26 +197,36 @@ export default async function BombPage({ params }: PageProps) {
               fontWeight: "bold",
             }}
           >
-            你收到了一份特别的礼物
+            Lovebombing, INC.
           </span>
         </div>
 
         {/* Window body */}
-        <div style={{ padding: "20px" }}>
-          <div style={{ textAlign: "center", marginBottom: "16px" }}>
+        <div style={{ padding: "24px" }}>
+          <div style={{ textAlign: "center", marginBottom: "20px" }}>
             <h1
               style={{
                 fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, 'Times New Roman', serif",
                 fontWeight: 300,
                 fontStyle: "normal",
                 color: "#000066",
-                fontSize: "40px",
+                fontSize: "44px",
                 margin: 0,
                 textShadow: "-2px 3px 6px rgba(0,0,0,0.25), 0px 2px 3px rgba(0,0,0,0.25)",
               }}
             >
               A lovebomb from {bomb.creator_name}
             </h1>
+            <p
+              style={{
+                fontFamily: "'VT323', monospace",
+                fontSize: "16px",
+                color: "#808080",
+                margin: "8px 0 0",
+              }}
+            >
+              Someone made this just for you 💗
+            </p>
           </div>
 
           <BombViewer canvasJson={bomb.canvas_json} layers={bomb.layers || []} beatData={bomb.beat_data} />
@@ -216,14 +236,14 @@ export default async function BombPage({ params }: PageProps) {
               display: "flex",
               flexWrap: "wrap",
               justifyContent: "center",
-              gap: "10px",
-              marginTop: "16px",
+              gap: "12px",
+              marginTop: "20px",
             }}
           >
             <Link href={`/bomb/${id}/add`} className="aqua-cta">
-              Add Your Lovebombs
+              💗 Add Your Lovebombs
             </Link>
-            <Link href="/create" className="aqua-cta">
+            <Link href="/" className="aqua-cta">
               Create Your Own
             </Link>
           </div>

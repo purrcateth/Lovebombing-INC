@@ -15,6 +15,7 @@ interface CanvasEditorProps {
   isCollaborative?: boolean;
   backgroundCanvasJson?: object | null;
   backgroundLayers?: object[];
+  creatorBeatData?: BeatPattern | null;
 }
 
 type ToolType = "pointer" | "pencil" | "eraser";
@@ -479,6 +480,7 @@ export default function CanvasEditor({
   isCollaborative = false,
   backgroundCanvasJson,
   backgroundLayers,
+  creatorBeatData,
 }: CanvasEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<fabric.Canvas | null>(null);
@@ -502,7 +504,9 @@ export default function CanvasEditor({
   const [activeTab, setActiveTab] = useState<"canvas" | "beats">("canvas");
   const [beatData, setBeatData] = useState<BeatPattern>(createDefaultPattern());
   const beatRef = useRef<BeatSequencerHandle>(null);
+  const creatorBeatRef = useRef<BeatSequencerHandle>(null);
   const [, forceUpdate] = useState(0); // force re-render when beat state changes
+  const hasCreatorBeat = !!(creatorBeatData && creatorBeatData.tracks.some((t) => t.pattern.some(Boolean)));
   const animationFrameRef = useRef<number | null>(null);
 
   const stopAnimationLoop = useCallback(() => {
@@ -1364,13 +1368,85 @@ export default function CanvasEditor({
         </div>
         </>
         ) : (
-        <div style={{ flex: 1, display: "flex", minHeight: "500px", height: "100%" }}>
-          <BeatSequencer
-            ref={beatRef}
-            pattern={beatData}
-            onChange={(p) => { setBeatData(p); forceUpdate((n) => n + 1); }}
-            hideTransport
-          />
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "500px", height: "100%" }}>
+          {/* Creator's beat (read-only) — shown when in collaborative mode */}
+          {isCollaborative && hasCreatorBeat && creatorBeatData && (
+            <div style={{ borderBottom: "2px solid #808080" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 10px",
+                  background: "#f0d8ec",
+                  borderBottom: "1px solid #ccc",
+                }}
+              >
+                <button
+                  onClick={() => { creatorBeatRef.current?.play(); forceUpdate((n) => n + 1); }}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    border: "2px outset #DFDFDF",
+                    background: creatorBeatRef.current?.isPlaying ? "#FF6B9D" : "#FFD8F6",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "14px",
+                    fontFamily: "'VT323', monospace",
+                    borderRadius: 0,
+                  }}
+                >
+                  {creatorBeatRef.current?.isPlaying ? "■" : "▶"}
+                </button>
+                <span style={{ fontFamily: "'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "bold" }}>
+                  Creator&apos;s Beat
+                </span>
+                <span style={{ fontFamily: "'VT323', monospace", fontSize: "12px", color: "#808080" }}>
+                  (read-only)
+                </span>
+              </div>
+              <div style={{ maxHeight: "200px", overflow: "auto" }}>
+                <BeatSequencer
+                  ref={creatorBeatRef}
+                  pattern={creatorBeatData}
+                  onChange={() => {}}
+                  readOnly
+                  hideTransport
+                />
+              </div>
+            </div>
+          )}
+
+          {/* User's own beat (editable) */}
+          {isCollaborative && hasCreatorBeat && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "6px 10px",
+                background: "#d8ecf0",
+                borderBottom: "1px solid #ccc",
+              }}
+            >
+              <span style={{ fontFamily: "'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "bold" }}>
+                Your Beat
+              </span>
+              <span style={{ fontFamily: "'VT323', monospace", fontSize: "12px", color: "#808080" }}>
+                (tap cells to add notes)
+              </span>
+            </div>
+          )}
+          <div style={{ flex: 1, display: "flex" }}>
+            <BeatSequencer
+              ref={beatRef}
+              pattern={beatData}
+              onChange={(p) => { setBeatData(p); forceUpdate((n) => n + 1); }}
+              hideTransport
+            />
+          </div>
         </div>
         )}
         </div>
@@ -1537,6 +1613,38 @@ export default function CanvasEditor({
                     : "REC"
                   : "Record"}
               </button>
+
+              {/* Mix Both — collaborative mode only */}
+              {isCollaborative && hasCreatorBeat && (
+                <>
+                  <div style={styles.toolbarDivider} />
+                  <button
+                    onClick={() => {
+                      // Play both beats simultaneously
+                      const creatorPlaying = creatorBeatRef.current?.isPlaying;
+                      const myPlaying = beatRef.current?.isPlaying;
+                      if (creatorPlaying || myPlaying) {
+                        // Stop both
+                        if (creatorPlaying) creatorBeatRef.current?.play();
+                        if (myPlaying) beatRef.current?.play();
+                      } else {
+                        // Start both at the same time
+                        creatorBeatRef.current?.play();
+                        beatRef.current?.play();
+                      }
+                      forceUpdate((n) => n + 1);
+                    }}
+                    style={{
+                      ...styles.btn,
+                      background: (creatorBeatRef.current?.isPlaying && beatRef.current?.isPlaying)
+                        ? "#FF6B9D" : "#E8A0FF",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {(creatorBeatRef.current?.isPlaying && beatRef.current?.isPlaying) ? "Stop Mix" : "Mix Both"}
+                  </button>
+                </>
+              )}
             </>
           )}
 

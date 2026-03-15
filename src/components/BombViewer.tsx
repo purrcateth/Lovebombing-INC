@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import * as fabric from "fabric";
 import type { BeatPattern } from "@/lib/types";
-import BeatSequencer from "@/components/BeatSequencer";
+import BeatSequencer, { BeatSequencerHandle } from "@/components/BeatSequencer";
 
 interface BombViewerProps {
   canvasJson: object;
@@ -19,20 +19,24 @@ const isGifSource = (src?: string) => Boolean(src && /(^data:image\/gif|\.gif($|
 const objectHasAnimation = (obj: fabric.FabricObject) => {
   const candidate = obj as fabric.FabricImage & {
     getSrc?: () => string;
-    [ANIMATED_KEY]?: boolean;
+    _isAnimatedSticker?: boolean;
   };
-  if (candidate[ANIMATED_KEY]) return true;
+  if (candidate._isAnimatedSticker) return true;
   if (typeof candidate.getSrc === "function") {
     return isGifSource(candidate.getSrc());
   }
   return false;
 };
 
+const MAC_FONT = "'VT323', 'Geneva', monospace";
+
 export default function BombViewer({ canvasJson, layers, beatData }: BombViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const beatRef = useRef<BeatSequencerHandle>(null);
   const [scale, setScale] = useState(1);
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -100,7 +104,8 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
     const handleResize = () => {
       if (!containerRef.current) return;
       const containerWidth = containerRef.current.clientWidth;
-      const maxDisplaySize = Math.min(containerWidth, 500);
+      // Much bigger display — up to 800px on desktop
+      const maxDisplaySize = Math.min(containerWidth, 800);
       const newScale = maxDisplaySize / CANVAS_SIZE;
       setScale(newScale);
     };
@@ -116,6 +121,16 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
   }, [canvasJson, layers]);
 
   const hasBeat = beatData && beatData.tracks.some((t) => t.pattern.some(Boolean));
+
+  const handlePlayBeat = useCallback(() => {
+    if (beatRef.current) {
+      beatRef.current.play();
+      // Force re-render to update button state
+      setTimeout(() => forceUpdate((n) => n + 1), 50);
+    }
+  }, []);
+
+  const isPlaying = beatRef.current?.isPlaying ?? false;
 
   return (
     <div style={{ width: "100%" }}>
@@ -162,6 +177,7 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
             boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
           }}
         >
+          {/* Title bar */}
           <div
             style={{
               height: "24px",
@@ -178,19 +194,73 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
               style={{
                 flex: 1,
                 textAlign: "center",
-                fontFamily: "'VT323', monospace",
+                fontFamily: MAC_FONT,
                 fontSize: "16px",
                 fontWeight: "bold",
               }}
             >
-              Beat
+              🎵 Beat
             </span>
           </div>
-          <div style={{ height: "240px", overflow: "auto" }}>
+
+          {/* Play controls bar */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "8px 12px",
+              background: "#f0d8ec",
+              borderBottom: "1px solid #ccc",
+            }}
+          >
+            <button
+              onClick={handlePlayBeat}
+              style={{
+                width: 40,
+                height: 40,
+                border: "2px outset #DFDFDF",
+                background: isPlaying ? "#FF6B9D" : "#FFD8F6",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "20px",
+                fontFamily: MAC_FONT,
+                borderRadius: 0,
+              }}
+            >
+              {isPlaying ? "■" : "▶"}
+            </button>
+            <span
+              style={{
+                fontFamily: MAC_FONT,
+                fontSize: "18px",
+                color: "#000066",
+              }}
+            >
+              {isPlaying ? "Now playing..." : "Press play to listen"}
+            </span>
+            <span
+              style={{
+                fontFamily: MAC_FONT,
+                fontSize: "14px",
+                color: "#808080",
+                marginLeft: "auto",
+              }}
+            >
+              {beatData.bpm} BPM
+            </span>
+          </div>
+
+          {/* Beat grid */}
+          <div style={{ maxHeight: "300px", overflow: "auto" }}>
             <BeatSequencer
+              ref={beatRef}
               pattern={beatData}
               onChange={() => {}}
               readOnly
+              hideTransport
             />
           </div>
         </div>
