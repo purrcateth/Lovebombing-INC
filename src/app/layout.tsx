@@ -31,14 +31,28 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
+          rel="preload"
+          href="/fonts/TAYBang.otf"
+          as="font"
+          type="font/otf"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/TAYSundaeRegular.otf"
+          as="font"
+          type="font/otf"
+          crossOrigin="anonymous"
+        />
+        <link
           href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Cormorant+Garamond:wght@300;400&family=VT323&family=B612+Mono&display=swap"
           rel="stylesheet"
         />
-        {/* Preload key background images */}
-        <link rel="preload" href="/backgrounds/welcomepage.png" as="image" />
-        <link rel="preload" href="/backgrounds/lovebombing_cloudsbg.png" as="image" />
+        {/* Preload the landing-page background at full original resolution.
+           Other page backgrounds load lazily when navigated to. */}
+        <link rel="preload" href="/backgrounds/welcomepage.png" as="image" fetchPriority="high" />
       </head>
-      <body className="antialiased">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

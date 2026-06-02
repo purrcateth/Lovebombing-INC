@@ -56,8 +56,13 @@ export default function Home() {
           boxShadow: "1px 1px 0px 0px #262626",
           position: "relative",
           overflow: "hidden",
-          padding: "32px 44px 40px",
+          padding: "53px 44px 43px",
           textAlign: "center",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "24px",
           opacity: mounted ? 1 : 0,
           transform: mounted ? "translateY(0)" : "translateY(20px)",
           transition: "opacity 0.6s ease-out 0.15s, transform 0.6s ease-out 0.15s",
@@ -70,11 +75,11 @@ export default function Home() {
         <div style={{ position: "absolute", bottom: 1, left: 0, right: 0, height: 1, background: "#808080" }} />
         <div style={{ position: "absolute", top: 0, right: 1, bottom: 0, width: 1, background: "#808080" }} />
 
-        {/* Title — Apple Garamond Light */}
+        {/* Title — TAYBang */}
         <h1
           style={{
-            fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, 'Times New Roman', serif",
-            fontWeight: 300,
+            fontFamily: "'TAYBang', 'Apple Garamond Light', Georgia, serif",
+            fontWeight: "normal",
             fontStyle: "normal",
             fontSize: 80,
             color: "#000066",
@@ -89,28 +94,32 @@ export default function Home() {
           Lovebombing
         </h1>
 
-        {/* Subtitle */}
+        {/* Poetic manifesto — Ray Johnson mail art lineage */}
         <p
           style={{
-            fontFamily: "'B612 Mono', monospace",
-            fontSize: 14,
-            color: "#262626",
-            letterSpacing: "1.1px",
-            margin: "16px 0 0",
-            whiteSpace: "nowrap",
-            textShadow: "0px 0px 1px #262626, 0px 0px 1px #262626",
+            fontFamily: "'TAYSundae', 'Apple Garamond Light', Garamond, Georgia, serif",
+            fontSize: 15,
+            lineHeight: 1.7,
+            color: "#3a3a5e",
+            margin: 0,
+            maxWidth: 460,
+            textAlign: "center",
             opacity: mounted ? 1 : 0,
-            transition: "opacity 0.5s ease-out 0.5s",
+            transition: "opacity 0.6s ease-out 0.55s",
           }}
         >
-          Bomb your loved ones.Or your haters.
+          In the lineage of Ray Johnson&apos;s mail art, Lovebombing is a participatory work that travels through a network of senders and receivers, gathering meaning as it moves. Each piece is composed by hand, the maker chooses a frame (square, landscape, or vertical, the formats of the Polaroid, the screen, and the phone), arranges a canvas of images, clips, and stickers pulled from a shared archive and from their own scraps, and builds a beat from scratch on a small sequencer. The making itself is recorded, a timelapse of the gesture, kept alongside the finished piece. Each receiver adds a layer, visual or sonic, or composes something in response, and sends it forward. The work holds that intimacy in the internet age is built less from grand declarations than from accumulated shorthand, and from the visible labor of having made something for someone. Each piece is small. The chain is the work.
         </p>
 
         {/* Name input row */}
         <form
           onSubmit={handleSubmit}
           style={{
-            marginTop: "52px",
+            margin: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "24px",
             opacity: mounted ? 1 : 0,
             transform: mounted ? "translateY(0)" : "translateY(10px)",
             transition: "opacity 0.5s ease-out 0.6s, transform 0.5s ease-out 0.6s",
@@ -130,12 +139,10 @@ export default function Home() {
             <label
               htmlFor="name-input"
               style={{
-                fontFamily: "'VT323', monospace",
-                fontSize: 22,
+                fontFamily: "'ChiKareGo2', 'VT323', 'Geneva', monospace",
+                fontSize: 18,
                 color: "#262626",
                 whiteSpace: "nowrap",
-                letterSpacing: "1.8px",
-                textShadow: "0px 0px 1px #262626, 0px 0px 1px #262626",
               }}
             >
               Name:
@@ -162,7 +169,7 @@ export default function Home() {
           </div>
 
           {/* CTA button — frame1.png aqua button */}
-          <div style={{ display: "flex", justifyContent: "center", marginTop: "36px" }}>
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 0 }}>
             <button
               type="submit"
               disabled={!name.trim() || loading}

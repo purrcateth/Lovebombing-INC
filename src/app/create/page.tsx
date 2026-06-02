@@ -72,9 +72,9 @@ export default function CreatePage() {
             style={{
               flex: 1,
               textAlign: "center",
-              fontFamily: "'VT323', monospace",
+              fontFamily: "'ChiKareGo2', 'VT323', monospace",
               fontSize: "16px",
-              fontWeight: "bold",
+              fontWeight: "normal",
             }}
           >
             New Lovebomb
@@ -115,7 +115,7 @@ export default function CreatePage() {
               style={{
                 fontFamily: "'VT323', monospace",
                 fontSize: "16px",
-                fontWeight: "bold",
+                fontWeight: "normal",
                 color: "#000000",
                 display: "block",
                 marginBottom: "4px",

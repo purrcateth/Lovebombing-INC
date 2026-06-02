@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import CanvasEditor from "@/components/CanvasEditor";
+import CanvasSizeDialog from "@/components/CanvasSizeDialog";
+import type { CanvasSize } from "@/lib/types";
 
 const TOTAL_HEARTS = 10;
 const HEART_INTERVAL = 200; // ms per heart
@@ -58,6 +60,7 @@ export default function CanvasPage() {
   const [dataReady, setDataReady] = useState(false);
   const [showCanvas, setShowCanvas] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [chosenSize, setChosenSize] = useState<CanvasSize | null>(null);
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
@@ -142,7 +145,7 @@ export default function CanvasPage() {
                 textAlign: "center",
                 fontFamily: "'ChiKareGo2', 'VT323', monospace",
                 fontSize: "14px",
-                fontWeight: "bold",
+                fontWeight: "normal",
               }}
             >
               Lovebombing, INC.
@@ -183,6 +186,18 @@ export default function CanvasPage() {
     );
   }
 
+  // After loading: ask the creator to pick a canvas size
+  if (!chosenSize) {
+    return (
+      <CanvasSizeDialog
+        title="Choose your canvas"
+        subtitle="Pick the shape your lovebomb will live in. (You can change it later.)"
+        confirmLabel="Open canvas"
+        onConfirm={(size) => setChosenSize(size)}
+      />
+    );
+  }
+
   return (
     <div
       style={{
@@ -190,7 +205,11 @@ export default function CanvasPage() {
         animation: "pageFadeIn 0.8s ease-out both",
       }}
     >
-      <CanvasEditor bombId={id} creatorName={creatorName || "Anonymous"} />
+      <CanvasEditor
+        bombId={id}
+        creatorName={creatorName || "Anonymous"}
+        canvasSize={chosenSize}
+      />
     </div>
   );
 }
