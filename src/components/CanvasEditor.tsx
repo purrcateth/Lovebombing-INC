@@ -989,7 +989,12 @@ export default function CanvasEditor({
 
     try {
       const isAnimated = isGifSource(src);
-      const targetSize = 150;
+      // Scale stickers relative to the canvas size, not a fixed pixel count.
+      // 150px was hardcoded — fine on a square 1080×1080 (~14%) but tiny on
+      // vertical (1080×1920) or landscape (1920×1080) where the larger axis
+      // makes the sticker look lost. 22% of the shorter axis gives a comparable
+      // visual weight on every canvas shape.
+      const targetSize = Math.min(canvasWidth, canvasHeight) * 0.22;
       const left = canvasX !== undefined ? canvasX - (targetSize / 2) : canvasWidth / 2 - (targetSize / 2);
       const top = canvasY !== undefined ? canvasY - (targetSize / 2) : canvasHeight / 2 - (targetSize / 2);
 
