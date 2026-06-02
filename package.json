@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@imgly/background-removal": "^1.7.0",
     "@supabase/supabase-js": "^2.98.0",
     "fabric": "^6.9.1",
     "next": "16.1.6",
