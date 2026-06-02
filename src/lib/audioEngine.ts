@@ -6,6 +6,7 @@ export interface BeatPattern {
   bpm: number;
   steps: number;
   tracks: BeatTrack[];
+  _recordings?: Record<string, string>; // instrumentKey → base64 WAV data
 }
 
 export interface BeatTrack {
@@ -153,6 +154,51 @@ export class BeatAudioEngine {
     this.init();
     const now = this.ctx!.currentTime;
     this.triggerInstrument(instrument, now, volume);
+  }
+
+  /**
+   * Render the given pattern into an offline AudioBuffer of the requested duration.
+   * Loops the pattern as needed to fill the duration.
+   * Reuses the live synth methods by temporarily swapping ctx/masterGain to an OfflineAudioContext.
+   */
+  async renderToBuffer(pattern: BeatPattern, durationSeconds: number, sampleRate = 44100): Promise<AudioBuffer> {
+    const length = Math.ceil(sampleRate * durationSeconds);
+    const offlineCtx = new OfflineAudioContext(2, length, sampleRate);
+    const offlineGain = offlineCtx.createGain();
+    offlineGain.gain.value = 1;
+    offlineGain.connect(offlineCtx.destination);
+
+    // Stash live context, swap in offline one for synthesis
+    const liveCtx = this.ctx;
+    const liveGain = this.masterGain;
+    // Cast to any because synth methods read this.ctx as AudioContext but OfflineAudioContext has compatible methods
+    (this as unknown as { ctx: BaseAudioContext }).ctx = offlineCtx;
+    this.masterGain = offlineGain;
+
+    try {
+      // Schedule every step across the duration
+      const secondsPerStep = 60 / pattern.bpm / 4; // 16th notes
+      const totalSteps = Math.ceil(durationSeconds / secondsPerStep);
+      const wasPattern = this.pattern;
+      this.pattern = pattern;
+      for (let i = 0; i < totalSteps; i++) {
+        const step = i % pattern.steps;
+        const time = i * secondsPerStep;
+        if (time >= durationSeconds) break;
+        for (const track of pattern.tracks) {
+          if (!track.pattern[step]) continue;
+          this.triggerInstrument(track.instrument, time, track.volume);
+        }
+      }
+      this.pattern = wasPattern;
+
+      const buffer = await offlineCtx.startRendering();
+      return buffer;
+    } finally {
+      // Restore live context
+      (this as unknown as { ctx: AudioContext | null }).ctx = liveCtx;
+      this.masterGain = liveGain;
+    }
   }
 
   /** Store a recorded audio buffer for playback in the sequencer. */
@@ -512,4 +558,105 @@ export class BeatAudioEngine {
     }
     return buffer;
   }
+
+  /** Load recording buffers from base64 WAV data stored in beat pattern. */
+  async loadRecordingsFromPattern(pattern: BeatPattern): Promise<void> {
+    if (!pattern._recordings) return;
+    this.init();
+    for (const [key, base64] of Object.entries(pattern._recordings)) {
+      try {
+        const buffer = await base64ToAudioBuffer(this.ctx!, base64);
+        this.addRecordingBuffer(key, buffer);
+      } catch {
+        console.warn(`Failed to decode recording: ${key}`);
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// WAV encoding/decoding helpers for persisting recordings
+// ---------------------------------------------------------------------------
+
+/** Convert an AudioBuffer to a base64-encoded WAV string. */
+export function audioBufferToBase64Wav(buffer: AudioBuffer): string {
+  const numChannels = 1;
+  const sampleRate = buffer.sampleRate;
+  const samples = buffer.getChannelData(0);
+
+  // Downsample to 16kHz to keep size small (~64KB for 2s)
+  const targetRate = 16000;
+  const ratio = sampleRate / targetRate;
+  const newLength = Math.floor(samples.length / ratio);
+  const downsampled = new Float32Array(newLength);
+  for (let i = 0; i < newLength; i++) {
+    downsampled[i] = samples[Math.floor(i * ratio)];
+  }
+
+  // Convert to 16-bit PCM
+  const bytesPerSample = 2;
+  const dataLength = downsampled.length * bytesPerSample;
+  const headerLength = 44;
+  const wavBuffer = new ArrayBuffer(headerLength + dataLength);
+  const view = new DataView(wavBuffer);
+
+  // WAV header
+  writeString(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(view, 8, "WAVE");
+  writeString(view, 12, "fmt ");
+  view.setUint32(16, 16, true); // chunk size
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, targetRate, true);
+  view.setUint32(28, targetRate * numChannels * bytesPerSample, true);
+  view.setUint16(32, numChannels * bytesPerSample, true);
+  view.setUint16(34, bytesPerSample * 8, true);
+  writeString(view, 36, "data");
+  view.setUint32(40, dataLength, true);
+
+  // PCM data
+  let offset = 44;
+  for (let i = 0; i < downsampled.length; i++) {
+    const s = Math.max(-1, Math.min(1, downsampled[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    offset += 2;
+  }
+
+  // Convert to base64
+  const bytes = new Uint8Array(wavBuffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function writeString(view: DataView, offset: number, str: string) {
+  for (let i = 0; i < str.length; i++) {
+    view.setUint8(offset + i, str.charCodeAt(i));
+  }
+}
+
+/** Convert a base64 WAV string back to an AudioBuffer. */
+async function base64ToAudioBuffer(ctx: AudioContext, base64: string): Promise<AudioBuffer> {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return ctx.decodeAudioData(bytes.buffer);
+}
+
+/**
+ * Convenience wrapper: spin up a temporary BeatAudioEngine and render the given pattern
+ * into an AudioBuffer of the requested duration. Used by the timelapse export pipeline.
+ */
+export async function renderBeatPatternToBuffer(
+  pattern: BeatPattern,
+  durationSeconds: number,
+  sampleRate = 44100,
+): Promise<AudioBuffer> {
+  const engine = new BeatAudioEngine();
+  return engine.renderToBuffer(pattern, durationSeconds, sampleRate);
 }
