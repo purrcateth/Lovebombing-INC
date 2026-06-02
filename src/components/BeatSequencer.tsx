@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from "react";
 import type { BeatPattern } from "@/lib/types";
-import { BeatAudioEngine, createDefaultPattern } from "@/lib/audioEngine";
+import { BeatAudioEngine, createDefaultPattern, audioBufferToBase64Wav } from "@/lib/audioEngine";
 
 export interface BeatSequencerHandle {
   play: () => void;
@@ -22,6 +22,7 @@ interface BeatSequencerProps {
   onChange: (pattern: BeatPattern) => void;
   readOnly?: boolean;
   hideTransport?: boolean;
+  showAll?: boolean;
 }
 
 const CELL_SIZE = 44;
@@ -45,7 +46,7 @@ const MELODY_COLORS = [
 const MAC_FONT = "'VT323', 'Geneva', monospace";
 
 const BeatSequencer = forwardRef<BeatSequencerHandle, BeatSequencerProps>(
-  function BeatSequencer({ pattern, onChange, readOnly, hideTransport }, ref) {
+  function BeatSequencer({ pattern, onChange, readOnly, hideTransport, showAll }, ref) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
   const [isRecording, setIsRecording] = useState(false);
@@ -60,6 +61,13 @@ const BeatSequencer = forwardRef<BeatSequencerHandle, BeatSequencerProps>(
       engineRef.current?.stop();
     };
   }, []);
+
+  // Load persisted recordings from pattern data
+  useEffect(() => {
+    if (pattern._recordings && engineRef.current) {
+      engineRef.current.loadRecordingsFromPattern(pattern);
+    }
+  }, [pattern._recordings]);
 
   const toggleCell = useCallback(
     (trackIndex: number, stepIndex: number) => {
@@ -140,6 +148,9 @@ const BeatSequencer = forwardRef<BeatSequencerHandle, BeatSequencerProps>(
       const instrumentKey = `recording_${recIndex}`;
       engineRef.current.addRecordingBuffer(instrumentKey, buffer);
 
+      // Convert to base64 WAV for persistence
+      const base64Wav = audioBufferToBase64Wav(buffer);
+
       // Add a new track to the pattern
       const newTrack = {
         name: `Rec ${recIndex + 1}`,
@@ -151,6 +162,10 @@ const BeatSequencer = forwardRef<BeatSequencerHandle, BeatSequencerProps>(
       onChange({
         ...pattern,
         tracks: [...pattern.tracks, newTrack],
+        _recordings: {
+          ...(pattern._recordings || {}),
+          [instrumentKey]: base64Wav,
+        },
       });
 
       // Preview the recording
@@ -196,7 +211,9 @@ const BeatSequencer = forwardRef<BeatSequencerHandle, BeatSequencerProps>(
     .map((t, i) => ({ track: t, index: i }))
     .filter(({ track }) => track.instrument.startsWith("recording_"));
 
-  const visibleTracks = activeSection === "drums"
+  const visibleTracks = showAll
+    ? [...drumTracks, ...melodyTracks, ...recordingTracks].filter(({ track }) => track.pattern.some(Boolean))
+    : activeSection === "drums"
     ? [...drumTracks, ...recordingTracks]
     : melodyTracks;
 
@@ -276,7 +293,7 @@ const BeatSequencer = forwardRef<BeatSequencerHandle, BeatSequencerProps>(
               padding: "2px 8px",
               cursor: "pointer",
               borderRadius: 0,
-              fontWeight: activeSection === "drums" ? "bold" : "normal",
+              fontWeight: "normal",
               color: "#000",
             }}
           >
@@ -292,7 +309,7 @@ const BeatSequencer = forwardRef<BeatSequencerHandle, BeatSequencerProps>(
               padding: "2px 8px",
               cursor: "pointer",
               borderRadius: 0,
-              fontWeight: activeSection === "melody" ? "bold" : "normal",
+              fontWeight: "normal",
               color: "#000",
             }}
           >

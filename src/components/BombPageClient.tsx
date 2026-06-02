@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import BombViewer from "@/components/BombViewer";
-import type { BeatPattern } from "@/lib/types";
+import type { BeatPattern, BombLayer, CanvasSize } from "@/lib/types";
 
 const TOTAL_HEARTS = 10;
 const HEART_INTERVAL = 200;
@@ -57,7 +57,8 @@ interface BombPageClientProps {
     creator_name: string;
     canvas_json: object;
     beat_data?: BeatPattern | null;
-    layers: { canvas_json: object }[];
+    canvas_size?: CanvasSize | null;
+    layers: BombLayer[];
   };
   id: string;
 }
@@ -132,7 +133,7 @@ export default function BombPageClient({ bomb, id }: BombPageClientProps) {
                 textAlign: "center",
                 fontFamily: "'ChiKareGo2', 'VT323', monospace",
                 fontSize: "14px",
-                fontWeight: "bold",
+                fontWeight: "normal",
               }}
             >
               Lovebombing, INC.
@@ -224,7 +225,7 @@ export default function BombPageClient({ bomb, id }: BombPageClientProps) {
               textAlign: "center",
               fontFamily: "'ChiKareGo2', 'VT323', monospace",
               fontSize: "16px",
-              fontWeight: "bold",
+              fontWeight: "normal",
             }}
           >
             Lovebombing, INC.
@@ -249,25 +250,45 @@ export default function BombPageClient({ bomb, id }: BombPageClientProps) {
                 color: "#000066",
                 fontSize: "44px",
                 margin: 0,
-                textShadow: "-2px 3px 6px rgba(0,0,0,0.25), 0px 2px 3px rgba(0,0,0,0.25)",
+                textShadow: "-2.5px 4px 9px rgba(0,0,0,0.25), 0px 3.3px 3.3px rgba(0,0,0,0.25)",
               }}
             >
               A lovebomb from {bomb.creator_name}
             </h1>
             <p
               style={{
-                fontFamily: "'VT323', monospace",
-                fontSize: "16px",
+                fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
+                fontStyle: "italic",
+                fontSize: "15px",
                 color: "#808080",
-                margin: "8px 0 0",
+                margin: "12px 0 0",
+                lineHeight: "1.6",
+                maxWidth: "600px",
+                marginLeft: "auto",
+                marginRight: "auto",
               }}
             >
-              Someone made this just for you
+              You can add your lovebomb and create a collaborative art and send the link to someone else to invite them to this mail art project
+            </p>
+            <p
+              style={{
+                fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
+                fontStyle: "italic",
+                fontSize: "15px",
+                color: "#808080",
+                margin: "6px 0 0",
+                lineHeight: "1.6",
+                maxWidth: "600px",
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
+            >
+              {"\u4F60\u53EF\u4EE5\u6DFB\u52A0\u4F60\u7684\u7231\u7684\u70B8\u5F39\uFF0C\u521B\u5EFA\u534F\u4F5C\u827A\u672F\uFF0C\u7136\u540E\u5C06\u94FE\u63A5\u53D1\u9001\u7ED9\u5176\u4ED6\u4EBA\uFF0C\u9080\u8BF7\u4ED6\u4EEC\u52A0\u5165\u8FD9\u4E2A\u90AE\u4EF6\u827A\u672F\u9879\u76EE"}
             </p>
           </div>
 
           <div style={{ opacity: 0, animation: "pageFadeIn 0.6s ease-out 0.5s both" }}>
-            <BombViewer canvasJson={bomb.canvas_json} layers={bomb.layers || []} beatData={bomb.beat_data} />
+            <BombViewer canvasJson={bomb.canvas_json} layers={bomb.layers || []} beatData={bomb.beat_data} creatorName={bomb.creator_name} canvasSize={bomb.canvas_size || "square"} />
           </div>
 
           <div

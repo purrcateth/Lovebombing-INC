@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     if (error) {
       console.error("Supabase insert error:", error);
       return NextResponse.json(
-        { error: "Failed to create lovebomb" },
+        { error: "Failed to create lovebomb", details: error.message, code: error.code, hint: error.hint },
         { status: 500 }
       );
     }

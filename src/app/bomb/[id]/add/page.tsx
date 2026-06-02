@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import CanvasEditor from "@/components/CanvasEditor";
-import type { BeatPattern } from "@/lib/types";
+import CanvasSizeDialog from "@/components/CanvasSizeDialog";
+import type { BeatPattern, CanvasSize } from "@/lib/types";
 
 const TOTAL_HEARTS = 10;
 const HEART_INTERVAL = 200;
@@ -51,11 +52,13 @@ export default function AddToBombPage() {
 
   const [name, setName] = useState("");
   const [nameSubmitted, setNameSubmitted] = useState(false);
+  const [chosenSize, setChosenSize] = useState<CanvasSize | null>(null);
   const [bomb, setBomb] = useState<{
     canvas_json: object;
-    layers: { canvas_json: object }[];
+    layers: { canvas_json: object; beat_data?: BeatPattern | null; contributor_name: string }[];
     beat_data?: BeatPattern | null;
     creator_name?: string;
+    canvas_size?: CanvasSize | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -122,7 +125,7 @@ export default function AddToBombPage() {
             }}
           >
             <div style={{ width: "12px", height: "12px", border: "1px solid #000", background: "#FFD8F6" }} />
-            <span style={{ flex: 1, textAlign: "center", fontFamily: "'ChiKareGo2', 'VT323', monospace", fontSize: "14px", fontWeight: "bold" }}>
+            <span style={{ flex: 1, textAlign: "center", fontFamily: "'ChiKareGo2', 'VT323', monospace", fontSize: "14px", fontWeight: "normal" }}>
               Lovebombing, INC.
             </span>
           </div>
@@ -194,9 +197,9 @@ export default function AddToBombPage() {
               style={{
                 flex: 1,
                 textAlign: "center",
-                fontFamily: "'VT323', monospace",
+                fontFamily: "'ChiKareGo2', 'VT323', monospace",
                 fontSize: "16px",
-                fontWeight: "bold",
+                fontWeight: "normal",
               }}
             >
               Error
@@ -207,7 +210,7 @@ export default function AddToBombPage() {
             <h1
               style={{
                 fontFamily: "Georgia, serif",
-                fontWeight: "bold",
+                fontWeight: "normal",
                 color: "#1a1a6e",
                 fontSize: "28px",
                 margin: "8px 0 0 0",
@@ -278,7 +281,7 @@ export default function AddToBombPage() {
                 textAlign: "center",
                 fontFamily: "'ChiKareGo2', 'VT323', monospace",
                 fontSize: "16px",
-                fontWeight: "bold",
+                fontWeight: "normal",
               }}
             >
               Lovebombing, INC.
@@ -292,9 +295,9 @@ export default function AddToBombPage() {
                 fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
                 fontWeight: 300,
                 color: "#000066",
-                fontSize: "32px",
+                fontSize: "40px",
                 margin: 0,
-                textShadow: "-2px 3px 6px rgba(0,0,0,0.15)",
+                textShadow: "-2.5px 4px 9px rgba(0,0,0,0.25), 0px 3.3px 3.3px rgba(0,0,0,0.25)",
               }}
             >
               Add Your Lovebombs
@@ -311,6 +314,54 @@ export default function AddToBombPage() {
                 Add your love to {bomb.creator_name}&apos;s lovebomb
               </p>
             )}
+            {(() => {
+              const layerCount = bomb?.layers?.length ?? 0;
+              const totalContributors = layerCount + 1; // +1 for the original creator
+              const MAX = 20;
+              if (totalContributors >= MAX) {
+                return (
+                  <p
+                    style={{
+                      fontFamily: "'ChiKareGo2', 'VT323', monospace",
+                      fontSize: "14px",
+                      color: "#a83232",
+                      marginTop: "10px",
+                    }}
+                  >
+                    This chain is full ({MAX} contributors). You can still view it, but new additions are closed.
+                  </p>
+                );
+              }
+              if (totalContributors >= MAX - 5) {
+                return (
+                  <p
+                    style={{
+                      fontFamily: "'ChiKareGo2', 'VT323', monospace",
+                      fontSize: "13px",
+                      color: "#806020",
+                      marginTop: "10px",
+                    }}
+                  >
+                    {totalContributors}/{MAX} contributors so far &mdash; chain is filling up.
+                  </p>
+                );
+              }
+              if (totalContributors > 1) {
+                return (
+                  <p
+                    style={{
+                      fontFamily: "'VT323', monospace",
+                      fontSize: "13px",
+                      color: "#a0a0a0",
+                      marginTop: "8px",
+                    }}
+                  >
+                    {totalContributors} have contributed so far
+                  </p>
+                );
+              }
+              return null;
+            })()}
 
             <form
               style={{ marginTop: "24px" }}
@@ -362,17 +413,23 @@ export default function AddToBombPage() {
                 />
               </div>
               <div style={{ marginTop: "24px" }}>
-                <button
-                  type="submit"
-                  disabled={!name.trim()}
-                  className="aqua-cta"
-                  style={{
-                    padding: "8px 32px",
-                    opacity: !name.trim() ? 0.5 : 1,
-                  }}
-                >
-                  Let&apos;s go
-                </button>
+                {(() => {
+                  const totalContributors = (bomb?.layers?.length ?? 0) + 1;
+                  const isFull = totalContributors >= 20;
+                  return (
+                    <button
+                      type="submit"
+                      disabled={!name.trim() || isFull}
+                      className="aqua-cta"
+                      style={{
+                        padding: "8px 32px",
+                        opacity: (!name.trim() || isFull) ? 0.5 : 1,
+                      }}
+                    >
+                      {isFull ? "Chain is full" : "Let's go"}
+                    </button>
+                  );
+                })()}
               </div>
             </form>
           </div>
@@ -380,6 +437,10 @@ export default function AddToBombPage() {
       </main>
     );
   }
+
+  // Collaborators inherit the creator's canvas size — no choice, no resize.
+  // Letting them pick a different frame would break the existing composition.
+  const inheritedSize = (bomb?.canvas_size as CanvasSize) || "square";
 
   return (
     <CanvasEditor
@@ -389,6 +450,20 @@ export default function AddToBombPage() {
       backgroundCanvasJson={bomb?.canvas_json || null}
       backgroundLayers={bomb?.layers?.map((l) => l.canvas_json) || []}
       creatorBeatData={bomb?.beat_data || null}
+      originalCreatorName={bomb?.creator_name || "Creator"}
+      canvasSize={inheritedSize}
+      allPreviousBeats={(() => {
+        const beats: { name: string; beatData: import("@/lib/types").BeatPattern }[] = [];
+        if (bomb?.beat_data && bomb.beat_data.tracks?.some((t: { pattern: boolean[] }) => t.pattern.some(Boolean))) {
+          beats.push({ name: bomb.creator_name || "Creator", beatData: bomb.beat_data });
+        }
+        for (const layer of (bomb?.layers || [])) {
+          if (layer.beat_data && layer.beat_data.tracks?.some((t: { pattern: boolean[] }) => t.pattern.some(Boolean))) {
+            beats.push({ name: layer.contributor_name, beatData: layer.beat_data });
+          }
+        }
+        return beats;
+      })()}
     />
   );
 }

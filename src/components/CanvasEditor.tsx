@@ -3,10 +3,19 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as fabric from "fabric";
 import { stickerCategories } from "@/lib/stickers";
-import type { StickerCategory, BeatPattern } from "@/lib/types";
+import type { StickerCategory, BeatPattern, CanvasSize } from "@/lib/types";
+import { CANVAS_SIZES } from "@/lib/types";
 import BeatSequencer, { BeatSequencerHandle } from "@/components/BeatSequencer";
 import { createDefaultPattern } from "@/lib/audioEngine";
 import { parseGif } from "@/lib/gifParser";
+import CanvasSizeDialog from "@/components/CanvasSizeDialog";
+import { TimelapseRecorder } from "@/lib/timelapseRecorder";
+import { exportTimelapseWithAudio, exportCanvasWithBeat, downloadBlob } from "@/lib/timelapseExport";
+
+interface ContributorBeatInfo {
+  name: string;
+  beatData: BeatPattern;
+}
 
 interface CanvasEditorProps {
   bombId: string;
@@ -16,20 +25,60 @@ interface CanvasEditorProps {
   backgroundCanvasJson?: object | null;
   backgroundLayers?: object[];
   creatorBeatData?: BeatPattern | null;
+  originalCreatorName?: string;
+  allPreviousBeats?: ContributorBeatInfo[];
+  canvasSize?: import("@/lib/types").CanvasSize;
 }
 
 type ToolType = "pointer" | "pencil" | "eraser";
 
 const MAX_OBJECTS = 100;
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB for images
+const MAX_IMAGE_SIZE = 25 * 1024 * 1024; // 25MB upload cap (auto-downscaled below)
+const AUTO_DOWNSCALE_THRESHOLD = 4 * 1024 * 1024; // images larger than this are downscaled before adding to canvas
+const AUTO_DOWNSCALE_MAX_EDGE = 2400; // long-edge target for downscaled images
 const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1GB for videos
-const CANVAS_SIZE = 1080;
 
 // Custom property to mark locked background objects
 const LOCKED_KEY = "_isLockedBackground";
 const ANIMATED_KEY = "_isAnimatedSticker";
 
 const isGifSource = (src?: string) => Boolean(src && /(^data:image\/gif|\.gif($|\?))/i.test(src));
+
+/**
+ * Downscale an image File so its long edge is at most `maxEdge` pixels.
+ * Returns a JPEG File (or PNG if the original had transparency hints in the type).
+ * Used to keep canvas_json payloads small when users upload high-res photos.
+ */
+async function downscaleImageFile(file: File, maxEdge: number): Promise<File | null> {
+  const blobUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error("image decode failed"));
+      i.src = blobUrl;
+    });
+    const longEdge = Math.max(img.naturalWidth, img.naturalHeight);
+    if (longEdge <= maxEdge) return null; // no need to downscale
+    const scale = maxEdge / longEdge;
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, w, h);
+    const outType = file.type === "image/png" ? "image/png" : "image/jpeg";
+    const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, outType, 0.88));
+    if (!blob) return null;
+    return new File([blob], file.name.replace(/\.[^.]+$/, outType === "image/png" ? ".png" : ".jpg"), { type: outType });
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
 
 const objectHasAnimation = (obj: fabric.FabricObject) => {
   const candidate = obj as fabric.FabricImage & {
@@ -170,7 +219,7 @@ const styles = {
     height: "100vh",
     flexDirection: "column" as const,
     background:
-      "url('/backgrounds/lovebombing_cloudsbg.png') center center / cover fixed no-repeat",
+      "#87ceeb url('/backgrounds/lovebombing_cloudsbg.jpg') center center / cover no-repeat",
     fontFamily: MAC.font,
     fontSize: MAC.fontSize,
     padding: "12px",
@@ -203,7 +252,7 @@ const styles = {
     flex: 1,
     textAlign: "center" as const,
     fontSize: "16px",
-    fontWeight: "bold" as const,
+    fontWeight: "normal" as const,
     color: "#000000",
     whiteSpace: "nowrap" as const,
     overflow: "hidden" as const,
@@ -269,7 +318,7 @@ const styles = {
     boxShadow: "none",
     cursor: "pointer",
     color: "#000000",
-    fontWeight: "bold" as const,
+    fontWeight: "normal" as const,
     whiteSpace: "nowrap" as const,
     lineHeight: "1.4",
   },
@@ -304,7 +353,7 @@ const styles = {
     background: MAC.pinstripes,
     borderBottom: `2px solid ${MAC.borderDark}`,
     fontSize: "16px",
-    fontWeight: "bold" as const,
+    fontWeight: "normal" as const,
     fontFamily: "'ChiKareGo2', 'VT323', 'Geneva', monospace",
     color: "#000000",
     userSelect: "none" as const,
@@ -359,7 +408,7 @@ const styles = {
     justifyContent: "center",
     overflow: "auto",
     margin: "4px",
-    background: "#FFFFFF",
+    background: "#FFD8F6", // pink so the white canvas stands out as a distinct frame
     borderRadius: "0px",
     boxShadow: MAC.inset,
     border: `2px inset ${MAC.bgLight}`,
@@ -481,17 +530,32 @@ export default function CanvasEditor({
   backgroundCanvasJson,
   backgroundLayers,
   creatorBeatData,
+  originalCreatorName,
+  allPreviousBeats,
+  canvasSize: initialCanvasSize = "square",
 }: CanvasEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<fabric.Canvas | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lockedCountRef = useRef(0);
+  const timelapseRef = useRef<TimelapseRecorder | null>(null);
+  // The most recent timelapse Blob — captured when user clicks Save & Share or Save
+  const lastTimelapseBlobRef = useRef<Blob | null>(null);
+
+  const [activeCanvasSize, setActiveCanvasSize] = useState<CanvasSize>(initialCanvasSize);
+  const [showResizeDialog, setShowResizeDialog] = useState(false);
+  const canvasDims = CANVAS_SIZES[activeCanvasSize];
+  const canvasWidth = canvasDims.width;
+  const canvasHeight = canvasDims.height;
 
   const [activeTool, setActiveTool] = useState<ToolType>("pointer");
   const [brushColor, setBrushColor] = useState("#000000");
   const [brushSize, setBrushSize] = useState(4);
   const [showSharePopup, setShowSharePopup] = useState(false);
   const [shareLink, setShareLink] = useState("");
+  const [showSaveFormatPopup, setShowSaveFormatPopup] = useState(false);
+  const [exportingTimelapse, setExportingTimelapse] = useState(false);
+  const [timelapseProgress, setTimelapseProgress] = useState(0);
   const [saving, setSaving] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stickers, setStickers] = useState<StickerCategory[]>(stickerCategories);
@@ -501,13 +565,31 @@ export default function CanvasEditor({
   const [zoomLevel, setZoomLevel] = useState(1);
   const [dragOverCanvas, setDragOverCanvas] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [processingUpload, setProcessingUpload] = useState(false);
+  const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
+  const [showBgRemovalPopup, setShowBgRemovalPopup] = useState(false);
   const [activeTab, setActiveTab] = useState<"canvas" | "beats">("canvas");
+  const [selectedObject, setSelectedObject] = useState<fabric.FabricObject | null>(null);
+  const [userLayers, setUserLayers] = useState<fabric.FabricObject[]>([]);
+  const [layerThumbs, setLayerThumbs] = useState<Map<fabric.FabricObject, string>>(new Map());
+  const [dragLayerIdx, setDragLayerIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [beatData, setBeatData] = useState<BeatPattern>(createDefaultPattern());
   const beatRef = useRef<BeatSequencerHandle>(null);
-  const creatorBeatRef = useRef<BeatSequencerHandle>(null);
+  const prevBeatRefs = useRef<(BeatSequencerHandle | null)[]>([]);
   const [, forceUpdate] = useState(0); // force re-render when beat state changes
-  const hasCreatorBeat = !!(creatorBeatData && creatorBeatData.tracks.some((t) => t.pattern.some(Boolean)));
-  const [creatorBeatOpen, setCreatorBeatOpen] = useState(false);
+
+  // Build list of all previous contributor beats
+  const previousBeats: ContributorBeatInfo[] = (() => {
+    if (allPreviousBeats && allPreviousBeats.length > 0) return allPreviousBeats;
+    // Fallback: use creatorBeatData if allPreviousBeats not provided
+    if (creatorBeatData && creatorBeatData.tracks.some((t) => t.pattern.some(Boolean))) {
+      return [{ name: originalCreatorName || "Creator", beatData: creatorBeatData }];
+    }
+    return [];
+  })();
+  const hasPreviousBeats = previousBeats.length > 0;
+  const [openPrevAccordions, setOpenPrevAccordions] = useState<Set<number>>(new Set());
   const animationFrameRef = useRef<number | null>(null);
 
   const stopAnimationLoop = useCallback(() => {
@@ -580,6 +662,27 @@ export default function CanvasEditor({
     }
   }, []);
 
+  const refreshLayers = useCallback(() => {
+    if (fabricRef.current) {
+      const objs = fabricRef.current.getObjects().filter(
+        (obj) => !(obj as fabric.FabricObject & Record<string, boolean>)[LOCKED_KEY]
+      );
+      const reversed = [...objs].reverse();
+      setUserLayers(reversed);
+      // Generate thumbnails
+      const thumbs = new Map<fabric.FabricObject, string>();
+      for (const obj of reversed) {
+        try {
+          const url = obj.toDataURL({ format: "png", multiplier: 0.15 });
+          thumbs.set(obj, url);
+        } catch {
+          // skip if toDataURL fails (e.g. tainted canvas)
+        }
+      }
+      setLayerThumbs(thumbs);
+    }
+  }, []);
+
   const lockObject = (obj: fabric.FabricObject) => {
     obj.set({
       selectable: false,
@@ -601,26 +704,89 @@ export default function CanvasEditor({
     if (!canvasRef.current) return;
 
     const canvas = new fabric.Canvas(canvasRef.current, {
-      width: CANVAS_SIZE,
-      height: CANVAS_SIZE,
+      width: canvasWidth,
+      height: canvasHeight,
       backgroundColor: "#ffffff",
       isDrawingMode: false,
     });
 
     fabricRef.current = canvas;
 
+    // Start timelapse recording silently. The lower-canvas is what fabric.js renders into.
+    if (canvasRef.current) {
+      try {
+        const lower = canvasRef.current; // visible canvas element
+        timelapseRef.current = new TimelapseRecorder(lower, {
+          fps: 5,
+          // Force the canvas to repaint at the recording fps so MediaRecorder
+          // gets frames during user idle (otherwise pauses cause it to drop frames entirely).
+          onTick: () => { try { canvas.requestRenderAll(); } catch { /* swallow */ } },
+        });
+        const ok = timelapseRef.current.start();
+        if (!ok) {
+          timelapseRef.current = null;
+          console.warn("[Timelapse] recording could not start");
+        }
+      } catch (err) {
+        console.warn("[Timelapse] could not start", err);
+        timelapseRef.current = null;
+      }
+    }
+
     canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
     canvas.freeDrawingBrush.color = brushColor;
     canvas.freeDrawingBrush.width = brushSize;
 
+    // Debounced history snapshot — coalesces rapid events (drag, draw) into one undo entry
+    let historyTimer: ReturnType<typeof setTimeout> | null = null;
+    const pushHistorySnapshot = () => {
+      if (historyTimer) clearTimeout(historyTimer);
+      historyTimer = setTimeout(() => {
+        try {
+          const snap = JSON.stringify(canvas.toJSON());
+          setHistory((prev) => {
+            // Skip if identical to last snapshot
+            if (prev.length > 0 && prev[prev.length - 1] === snap) return prev;
+            // Cap history at 50 to keep memory reasonable
+            const next = [...prev, snap];
+            return next.length > 50 ? next.slice(next.length - 50) : next;
+          });
+        } catch { /* swallow */ }
+      }, 250);
+    };
+
     canvas.on("object:added", () => {
       updateObjectCount();
-      setHistory((prev) => [...prev, JSON.stringify(canvas.toJSON())]);
+      refreshLayers();
+      pushHistorySnapshot();
       syncAnimationLoop();
     });
     canvas.on("object:removed", () => {
       updateObjectCount();
+      refreshLayers();
+      pushHistorySnapshot();
       syncAnimationLoop();
+    });
+    canvas.on("object:modified", () => {
+      // Move, scale, rotate, blend mode change, etc.
+      pushHistorySnapshot();
+    });
+    canvas.on("path:created", () => {
+      // Pencil drawing finished a stroke
+      pushHistorySnapshot();
+    });
+    canvas.on("text:editing:exited", () => {
+      // User finished editing text
+      pushHistorySnapshot();
+    });
+    canvas.on("selection:created", (e) => {
+      setSelectedObject((e as { selected?: fabric.FabricObject[] }).selected?.[0] || null);
+    });
+    canvas.on("selection:updated", (e) => {
+      setSelectedObject((e as { selected?: fabric.FabricObject[] }).selected?.[0] || null);
+    });
+    canvas.on("selection:cleared", () => {
+      setSelectedObject(null);
     });
 
     const initCanvas = async () => {
@@ -759,8 +925,9 @@ export default function CanvasEditor({
 
     const handleResize = () => {
       if (!containerRef.current) return;
-      const containerWidth = containerRef.current.clientWidth;
-      const newScale = Math.min(containerWidth / CANVAS_SIZE, 1);
+      const cw = containerRef.current.clientWidth;
+      const ch = containerRef.current.clientHeight || cw;
+      const newScale = Math.min(cw / canvasWidth, ch / canvasHeight, 1);
       setScale(newScale);
     };
 
@@ -773,10 +940,28 @@ export default function CanvasEditor({
       targetEl.removeEventListener("touchmove", handleTouchMove);
       targetEl.removeEventListener("touchend", handleTouchEnd);
       stopAnimationLoop();
+      // Stop timelapse recording (fire-and-forget)
+      timelapseRef.current?.stop().catch(() => {});
+      timelapseRef.current = null;
       canvas.dispose();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Handle canvas size changes mid-session (CapCut-style: keep content, change frame)
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
+    canvas.renderAll();
+    // Recompute display scale to fit new dimensions
+    if (containerRef.current) {
+      const cw = containerRef.current.clientWidth;
+      const ch = containerRef.current.clientHeight || cw;
+      setScale(Math.min(cw / canvasWidth, ch / canvasHeight, 1));
+    }
+  }, [canvasWidth, canvasHeight]);
+
 
   useEffect(() => {
     if (!fabricRef.current?.freeDrawingBrush) return;
@@ -805,8 +990,8 @@ export default function CanvasEditor({
     try {
       const isAnimated = isGifSource(src);
       const targetSize = 150;
-      const left = canvasX !== undefined ? canvasX - (targetSize / 2) : CANVAS_SIZE / 2 - (targetSize / 2);
-      const top = canvasY !== undefined ? canvasY - (targetSize / 2) : CANVAS_SIZE / 2 - (targetSize / 2);
+      const left = canvasX !== undefined ? canvasX - (targetSize / 2) : canvasWidth / 2 - (targetSize / 2);
+      const top = canvasY !== undefined ? canvasY - (targetSize / 2) : canvasHeight / 2 - (targetSize / 2);
 
       if (isAnimated) {
         // For GIF stickers: fetch blob, decode frames with ImageDecoder
@@ -853,8 +1038,8 @@ export default function CanvasEditor({
 
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
-    const canvasX = (screenX / (rect.width / CANVAS_SIZE) - (vpt ? vpt[4] : 0)) / zoom;
-    const canvasY = (screenY / (rect.height / CANVAS_SIZE) - (vpt ? vpt[5] : 0)) / zoom;
+    const canvasX = (screenX / (rect.width / canvasWidth) - (vpt ? vpt[4] : 0)) / zoom;
+    const canvasY = (screenY / (rect.height / canvasHeight) - (vpt ? vpt[5] : 0)) / zoom;
 
     addStickerAtPosition(stickerSrc, canvasX, canvasY);
   };
@@ -869,16 +1054,28 @@ export default function CanvasEditor({
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const original = e.target.files?.[0];
+    if (!original) return;
 
-    const isVideo = file.type.startsWith("video/");
-    const isGif = file.type === "image/gif";
+    const isVideo = original.type.startsWith("video/");
+    const isGif = original.type === "image/gif";
     const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
 
-    if (file.size > maxSize) {
-      alert(isVideo ? "Video is too large! Max size is 1GB." : "Image is too large! Max size is 5MB.");
+    if (original.size > maxSize) {
+      alert(isVideo ? "Video is too large! Max size is 1GB." : "Image is too large! Max size is 25MB.");
       return;
+    }
+
+    // For non-GIF images larger than threshold, downscale client-side so the canvas_json
+    // payload stays manageable when saved to Supabase. GIFs are passed through (animated frames).
+    let file = original;
+    if (!isVideo && !isGif && original.size > AUTO_DOWNSCALE_THRESHOLD) {
+      try {
+        const downscaled = await downscaleImageFile(original, AUTO_DOWNSCALE_MAX_EDGE);
+        if (downscaled) file = downscaled;
+      } catch (err) {
+        console.warn("[Upload] downscale failed, using original", err);
+      }
     }
 
     const canvas = fabricRef.current;
@@ -916,12 +1113,12 @@ export default function CanvasEditor({
         const w = video.videoWidth || 640;
         const h = video.videoHeight || 360;
         const fabricImg = createVideoFabricImage(video, w, h);
-        const canvasMax = CANVAS_SIZE * 0.4;
+        const canvasMax = Math.min(canvasWidth, canvasHeight) * 0.4;
         const s = Math.min(canvasMax / w, canvasMax / h, 1);
         fabricImg.set({
           scaleX: s, scaleY: s,
-          left: CANVAS_SIZE / 2 - (w * s) / 2,
-          top: CANVAS_SIZE / 2 - (h * s) / 2,
+          left: canvasWidth / 2 - (w * s) / 2,
+          top: canvasHeight / 2 - (h * s) / 2,
         });
         canvas.add(fabricImg);
         canvas.setActiveObject(fabricImg);
@@ -930,45 +1127,112 @@ export default function CanvasEditor({
       } else if (isGif) {
         // GIFs: use ImageDecoder API to manually decode each frame
         const { fabricImg, width: w, height: h } = await createGifFabricImage(file);
-        const canvasMax = CANVAS_SIZE * 0.4;
+        const canvasMax = Math.min(canvasWidth, canvasHeight) * 0.4;
         const s = Math.min(canvasMax / w, canvasMax / h, 1);
         fabricImg.set({
           scaleX: s, scaleY: s,
-          left: CANVAS_SIZE / 2 - (w * s) / 2,
-          top: CANVAS_SIZE / 2 - (h * s) / 2,
+          left: canvasWidth / 2 - (w * s) / 2,
+          top: canvasHeight / 2 - (h * s) / 2,
         });
         canvas.add(fabricImg);
         canvas.setActiveObject(fabricImg);
         canvas.renderAll();
         setActiveTool("pointer");
       } else {
-        // Regular static images: use data URL
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const dataUrl = event.target?.result as string;
-          try {
-            const fabricImg = await fabric.FabricImage.fromURL(dataUrl);
-            const canvasMax = CANVAS_SIZE * 0.4;
-            const s = Math.min(canvasMax / (fabricImg.width || canvasMax), canvasMax / (fabricImg.height || canvasMax), 1);
-            fabricImg.set({
-              scaleX: s, scaleY: s,
-              left: CANVAS_SIZE / 2 - ((fabricImg.width || 0) * s) / 2,
-              top: CANVAS_SIZE / 2 - ((fabricImg.height || 0) * s) / 2,
-            });
-            canvas.add(fabricImg);
-            canvas.setActiveObject(fabricImg);
-            canvas.renderAll();
-            setActiveTool("pointer");
-          } catch {
-            alert("Could not load image. Please try another one.");
-          }
-        };
-        reader.readAsDataURL(file);
+        // Static images: ask user whether to remove background
+        setPendingUploadFile(file);
+        setShowBgRemovalPopup(true);
       }
     } catch {
       alert("Could not load file. Please try another one.");
     }
     e.target.value = "";
+  };
+
+  // Convert a Blob/File to a base64 data URL so it can be embedded in canvas_json
+  // and persist across sessions. CRITICAL: Fabric serializes images by their src.
+  // If src is a "blob:" URL, that URL ONLY works in the browser tab that created it —
+  // when the recipient opens the shared bomb link, every blob: src is broken, so all
+  // uploaded photos appear blank. Data URLs embed the image bytes inline, so the
+  // bomb is fully self-contained and portable.
+  const blobToDataURL = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("FileReader failed"));
+      reader.readAsDataURL(blob);
+    });
+
+  const addImageToCanvas = async (file: File, removeBg: boolean) => {
+    setShowBgRemovalPopup(false);
+    setPendingUploadFile(null);
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    if (removeBg) {
+      setProcessingUpload(true);
+      try {
+        const { removeBackground } = await import("@imgly/background-removal");
+        const blob = await removeBackground(file, {
+          output: { format: "image/png", quality: 1 },
+        });
+        // Embed as data URL so the image survives in saved canvas_json
+        const transparentUrl = await blobToDataURL(blob as Blob);
+        const fabricImg = await fabric.FabricImage.fromURL(transparentUrl);
+        const canvasMax = Math.min(canvasWidth, canvasHeight) * 0.4;
+        const s = Math.min(canvasMax / (fabricImg.width || canvasMax), canvasMax / (fabricImg.height || canvasMax), 1);
+        fabricImg.set({
+          scaleX: s, scaleY: s,
+          left: canvasWidth / 2 - ((fabricImg.width || 0) * s) / 2,
+          top: canvasHeight / 2 - ((fabricImg.height || 0) * s) / 2,
+        });
+        canvas.add(fabricImg);
+        canvas.setActiveObject(fabricImg);
+        canvas.renderAll();
+        setActiveTool("pointer");
+      } catch (err) {
+        console.error("Background removal failed, adding original:", err);
+        // Fallback to original image — still as data URL so save is portable
+        try {
+          const fallbackUrl = await blobToDataURL(file);
+          const fabricImg = await fabric.FabricImage.fromURL(fallbackUrl);
+          const canvasMax = Math.min(canvasWidth, canvasHeight) * 0.4;
+          const s = Math.min(canvasMax / (fabricImg.width || canvasMax), canvasMax / (fabricImg.height || canvasMax), 1);
+          fabricImg.set({
+            scaleX: s, scaleY: s,
+            left: canvasWidth / 2 - ((fabricImg.width || 0) * s) / 2,
+            top: canvasHeight / 2 - ((fabricImg.height || 0) * s) / 2,
+          });
+          canvas.add(fabricImg);
+          canvas.setActiveObject(fabricImg);
+          canvas.renderAll();
+          setActiveTool("pointer");
+        } catch {
+          alert("Could not load image. Please try another one.");
+        }
+      } finally {
+        setProcessingUpload(false);
+      }
+    } else {
+      // Keep original image as-is — but as data URL so it's persistable
+      try {
+        const url = await blobToDataURL(file);
+        const fabricImg = await fabric.FabricImage.fromURL(url);
+        const canvasMax = Math.min(canvasWidth, canvasHeight) * 0.4;
+        const s = Math.min(canvasMax / (fabricImg.width || canvasMax), canvasMax / (fabricImg.height || canvasMax), 1);
+        fabricImg.set({
+          scaleX: s, scaleY: s,
+          left: canvasWidth / 2 - ((fabricImg.width || 0) * s) / 2,
+          top: canvasHeight / 2 - ((fabricImg.height || 0) * s) / 2,
+        });
+        canvas.add(fabricImg);
+        canvas.setActiveObject(fabricImg);
+        canvas.renderAll();
+        setActiveTool("pointer");
+      } catch {
+        alert("Could not load image. Please try another one.");
+      }
+    }
   };
 
   const deleteSelected = () => {
@@ -989,23 +1253,48 @@ export default function CanvasEditor({
     if (!canvas || history.length === 0) return;
 
     const newHistory = [...history];
+    // Pop the current state — the previous state is what we want to restore
     newHistory.pop();
 
     if (newHistory.length === 0) {
+      // No more history — clear only user objects, preserve any locked background layers
       const allObjects = canvas.getObjects();
       const userObjects = allObjects.filter(
         (obj) => !(obj as fabric.FabricObject & Record<string, boolean>)[LOCKED_KEY]
       );
       userObjects.forEach((obj) => canvas.remove(obj));
+      canvas.discardActiveObject();
       canvas.renderAll();
     } else {
       const prevState = newHistory[newHistory.length - 1];
+      // loadFromJSON wipes the canvas and reloads — preserve viewport transform
+      const vpt = canvas.viewportTransform ? [...canvas.viewportTransform] : null;
       canvas.loadFromJSON(JSON.parse(prevState)).then(() => {
+        if (vpt) canvas.setViewportTransform(vpt as fabric.TMat2D);
+        canvas.discardActiveObject();
         canvas.renderAll();
-      });
+        // Re-apply locked styling to background objects after reload
+        for (const obj of canvas.getObjects()) {
+          const tagged = obj as fabric.FabricObject & Record<string, boolean>;
+          if (tagged[LOCKED_KEY]) {
+            obj.set({
+              selectable: false,
+              evented: false,
+              lockMovementX: true,
+              lockMovementY: true,
+              lockRotation: true,
+              lockScalingX: true,
+              lockScalingY: true,
+              opacity: 0.7,
+            });
+          }
+        }
+      }).catch(() => { /* swallow load errors */ });
     }
     setHistory(newHistory);
     updateObjectCount();
+    refreshLayers();
+    setSelectedObject(null);
   };
 
   const clearCanvas = () => {
@@ -1068,15 +1357,20 @@ export default function CanvasEditor({
         ? `/api/bombs/${bombId}/layer`
         : `/api/bombs/${bombId}`;
 
+      const userBeatData = beatData.tracks.some((t) => t.pattern.some(Boolean)) ? beatData : null;
+
       const body = isCollaborative
         ? {
             contributor_name: creatorName,
             canvas_json: canvasJson,
+            beat_data: userBeatData,
+            canvas_size: activeCanvasSize,
           }
         : {
             canvas_json: canvasJson,
             thumbnail_data: thumbnailDataUrl,
-            beat_data: beatData.tracks.some((t) => t.pattern.some(Boolean)) ? beatData : null,
+            canvas_size: activeCanvasSize,
+            beat_data: userBeatData,
           };
 
       const res = await fetch(endpoint, {
@@ -1085,7 +1379,38 @@ export default function CanvasEditor({
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) throw new Error("Save failed");
+      if (!res.ok) {
+        // Try to surface a friendly error if the server gave one (e.g. contributor cap reached)
+        try {
+          const errBody = await res.json();
+          if (errBody?.code === "CONTRIBUTOR_LIMIT_REACHED") {
+            alert(errBody.error || "This lovebomb is full.");
+            setSaving(false);
+            return;
+          }
+          if (errBody?.error) {
+            alert(errBody.error);
+            setSaving(false);
+            return;
+          }
+        } catch { /* fall through to generic error */ }
+        throw new Error("Save failed");
+      }
+
+      // STOP the recorder to flush ALL accumulated chunks into one final blob.
+      // stop() is more reliable than snapshot() — it forces MediaRecorder to emit every
+      // remaining buffered frame before returning. Snapshot can return null if no chunk has fired yet.
+      try {
+        const blob = await timelapseRef.current?.stop();
+        if (blob && blob.size > 0) {
+          lastTimelapseBlobRef.current = blob;
+          console.log("[Timelapse] saved full session recording, size:", blob.size, "bytes");
+        } else {
+          console.warn("[Timelapse] stop() returned no blob — fallback will run on Download");
+        }
+      } catch (err) {
+        console.warn("[Timelapse] stop failed", err);
+      }
 
       const origin = window.location.origin;
       const link = `${origin}/bomb/${bombId}`;
@@ -1283,16 +1608,20 @@ export default function CanvasEditor({
             onClick={() => setActiveTab("canvas")}
             style={{
               flex: 1,
-              padding: "4px 0",
-              fontFamily: MAC.font,
-              fontSize: "14px",
+              padding: "9px 0 1px",
+              fontFamily: "'TAYBang', 'VT323', monospace",
+              fontSize: "22px",
               border: "none",
               borderRight: "1px solid #808080",
               background: activeTab === "canvas" ? "#FFFFFF" : MAC.bg,
-              fontWeight: activeTab === "canvas" ? "bold" : "normal",
+              fontWeight: "normal",
               cursor: "pointer",
               borderRadius: 0,
               color: "#000",
+              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             Canvas
@@ -1301,24 +1630,31 @@ export default function CanvasEditor({
             onClick={() => setActiveTab("beats")}
             style={{
               flex: 1,
-              padding: "4px 0",
-              fontFamily: MAC.font,
-              fontSize: "14px",
+              padding: "9px 0 1px",
+              fontFamily: "'TAYBang', 'VT323', monospace",
+              fontSize: "22px",
               border: "none",
               background: activeTab === "beats" ? "#FFFFFF" : MAC.bg,
-              fontWeight: activeTab === "beats" ? "bold" : "normal",
+              fontWeight: "normal",
               cursor: "pointer",
               borderRadius: 0,
               color: "#000",
+              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             Beat Maker
           </button>
         </div>
 
-        {/* Canvas area — sunken inset panel */}
-        {activeTab === "canvas" ? (
-        <>
+        {/* Canvas area — sunken inset panel.
+            CRITICAL: we keep BOTH tabs mounted (just toggle visibility) so:
+              1. The Fabric canvas isn't destroyed when user switches to the Beats tab.
+              2. The timelapse recorder keeps capturing the canvas backing store
+                 throughout the ENTIRE session — including time spent on the Beats tab. */}
+        <div style={{ display: activeTab === "canvas" ? "contents" : "none" }}>
         <div
           ref={containerRef}
           style={{
@@ -1331,13 +1667,51 @@ export default function CanvasEditor({
         >
           <div
             style={{
-              transform: `scale(${scale})`,
-              transformOrigin: "center center",
-              border: "1px solid #000000",
-              boxShadow: "2px 2px 4px rgba(0,0,0,0.2)",
+              width: canvasWidth * scale,
+              height: canvasHeight * scale,
+              position: "relative",
+              flexShrink: 0,
             }}
           >
-            <canvas ref={canvasRef} />
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: canvasWidth,
+                height: canvasHeight,
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+                border: "1px solid #000000",
+                boxShadow: "2px 2px 4px rgba(0,0,0,0.2)",
+              }}
+            >
+              <canvas ref={canvasRef} />
+            {processingUpload && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "rgba(255, 216, 246, 0.85)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 10,
+                }}
+              >
+                <div style={{ fontSize: "36px", marginBottom: "12px", animation: "spin 1.5s linear infinite" }}>
+                  {"✂️"}
+                </div>
+                <span style={{ fontFamily: MAC.font, fontSize: "18px", color: "#000066" }}>
+                  Removing background...
+                </span>
+                <span style={{ fontFamily: MAC.font, fontSize: "13px", color: "#808080", marginTop: "6px" }}>
+                  First time may take a moment to load the model
+                </span>
+              </div>
+            )}
+            </div>
           </div>
         </div>
 
@@ -1369,74 +1743,86 @@ export default function CanvasEditor({
           <span>{diskMB} MB in disk</span>
           <span>888 MB available</span>
         </div>
-        </>
-        ) : (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "500px", height: "100%" }}>
-          {/* Creator's beat accordion — shown when in collaborative mode */}
-          {isCollaborative && hasCreatorBeat && creatorBeatData && (
-            <div style={{ borderBottom: "2px solid #808080", flexShrink: 0 }}>
-              {/* Accordion header — play button always visible */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "6px 10px",
-                  background: "#f0d8ec",
-                  borderBottom: creatorBeatOpen ? "1px solid #ccc" : "none",
-                  cursor: "pointer",
-                  userSelect: "none",
-                }}
-                onClick={() => setCreatorBeatOpen(!creatorBeatOpen)}
-              >
-                {/* Play/Stop — prevent accordion toggle */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); creatorBeatRef.current?.play(); forceUpdate((n) => n + 1); }}
+        </div>
+        <div style={{ flex: 1, display: activeTab === "beats" ? "flex" : "none", flexDirection: "column", minHeight: "500px", height: "100%" }}>
+          {/* All previous contributors' beats — accordion list */}
+          {isCollaborative && hasPreviousBeats && previousBeats.map((contrib, idx) => {
+            const isOpen = openPrevAccordions.has(idx);
+            const isPlayingThis = prevBeatRefs.current[idx]?.isPlaying ?? false;
+            const contribHasDrums = contrib.beatData.tracks.some((t) => !t.instrument.startsWith("melody_") && !t.instrument.startsWith("recording_") && t.pattern.some(Boolean));
+            const contribHasMelody = contrib.beatData.tracks.some((t) => t.instrument.startsWith("melody_") && t.pattern.some(Boolean));
+            const contribHasRecording = contrib.beatData.tracks.some((t) => t.instrument.startsWith("recording_") && t.pattern.some(Boolean));
+            const label = [contribHasDrums && "Beat", contribHasMelody && "Melody", contribHasRecording && "Recording"].filter(Boolean).join(" & ");
+
+            return (
+              <div key={idx} style={{ borderBottom: "2px solid #808080", flexShrink: 0 }}>
+                <div
                   style={{
-                    width: 28,
-                    height: 28,
-                    border: "2px outset #DFDFDF",
-                    background: creatorBeatRef.current?.isPlaying ? "#FF6B9D" : "#FFD8F6",
-                    cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "14px",
-                    fontFamily: "'VT323', monospace",
-                    borderRadius: 0,
-                    flexShrink: 0,
+                    gap: "8px",
+                    padding: "6px 10px",
+                    background: "#f0d8ec",
+                    borderBottom: isOpen ? "1px solid #ccc" : "none",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                  onClick={() => {
+                    setOpenPrevAccordions((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(idx)) next.delete(idx);
+                      else next.add(idx);
+                      return next;
+                    });
                   }}
                 >
-                  {creatorBeatRef.current?.isPlaying ? "■" : "▶"}
-                </button>
-                <span style={{ fontFamily: "'ChiKareGo2', 'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "bold" }}>
-                  Creator&apos;s Beat
-                </span>
-                <span style={{ fontFamily: "'VT323', monospace", fontSize: "12px", color: "#808080" }}>
-                  (read-only)
-                </span>
-                {/* Accordion arrow */}
-                <span style={{ marginLeft: "auto", fontSize: "12px", color: "#808080", fontFamily: "'VT323', monospace" }}>
-                  {creatorBeatOpen ? "▼" : "▶"}
-                </span>
-              </div>
-              {/* Accordion body — collapsible */}
-              {creatorBeatOpen && (
-                <div style={{ maxHeight: "220px", overflow: "auto" }}>
-                  <BeatSequencer
-                    ref={creatorBeatRef}
-                    pattern={creatorBeatData}
-                    onChange={() => {}}
-                    readOnly
-                    hideTransport
-                  />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); prevBeatRefs.current[idx]?.play(); forceUpdate((n) => n + 1); }}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      border: "2px outset #DFDFDF",
+                      background: isPlayingThis ? "#FF6B9D" : "#FFD8F6",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "14px",
+                      fontFamily: "'VT323', monospace",
+                      borderRadius: 0,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isPlayingThis ? "\u25A0" : "\u25B6"}
+                  </button>
+                  <span style={{ fontFamily: "'ChiKareGo2', 'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "normal" }}>
+                    {contrib.name}&apos;s {label}
+                  </span>
+                  <span style={{ fontFamily: "'VT323', monospace", fontSize: "12px", color: "#808080" }}>
+                    (read-only)
+                  </span>
+                  <span style={{ marginLeft: "auto", fontSize: "12px", color: "#808080", fontFamily: "'VT323', monospace" }}>
+                    {isOpen ? "\u25BC" : "\u25B6"}
+                  </span>
                 </div>
-              )}
-            </div>
-          )}
+                {isOpen && (
+                  <div style={{ maxHeight: "220px", overflow: "auto" }}>
+                    <BeatSequencer
+                      ref={(el) => { prevBeatRefs.current[idx] = el; }}
+                      pattern={contrib.beatData}
+                      onChange={() => {}}
+                      readOnly
+                      hideTransport
+                      showAll
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* User's own beat label */}
-          {isCollaborative && hasCreatorBeat && (
+          {isCollaborative && hasPreviousBeats && (
             <div
               style={{
                 display: "flex",
@@ -1448,8 +1834,8 @@ export default function CanvasEditor({
                 flexShrink: 0,
               }}
             >
-              <span style={{ fontFamily: "'ChiKareGo2', 'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "bold" }}>
-                Your Beat
+              <span style={{ fontFamily: "'ChiKareGo2', 'VT323', monospace", fontSize: "14px", color: "#000066", fontWeight: "normal" }}>
+                {creatorName || "Your"}&apos;s Beat
               </span>
               <span style={{ fontFamily: "'VT323', monospace", fontSize: "12px", color: "#808080" }}>
                 (tap cells to add notes)
@@ -1465,7 +1851,6 @@ export default function CanvasEditor({
             />
           </div>
         </div>
-        )}
         </div>
 
         {/* ─── Bottom Toolbar ─── */}
@@ -1529,6 +1914,53 @@ export default function CanvasEditor({
               {/* Divider */}
               <div style={styles.toolbarDivider} />
 
+              {/* Add Text */}
+              <button
+                onClick={() => {
+                  const canvas = fabricRef.current;
+                  if (!canvas) return;
+                  const userObjs = canvas.getObjects().length - lockedCountRef.current;
+                  if (userObjs >= MAX_OBJECTS) { alert("Canvas is full!"); return; }
+                  const text = new fabric.IText("Type here", {
+                    fontFamily: "TAYBang",
+                    fontSize: 20,
+                    fill: brushColor,
+                    left: canvasWidth / 2 - 60,
+                    top: canvasHeight / 2 - 15,
+                  });
+                  canvas.add(text);
+                  canvas.setActiveObject(text);
+                  text.enterEditing();
+                  text.selectAll();
+                  canvas.renderAll();
+                  setActiveTool("pointer");
+                }}
+                style={styles.btn}
+              >
+                Add Text
+              </button>
+
+              {/* Text color — when text is selected */}
+              {selectedObject && (selectedObject.type === "i-text" || selectedObject.type === "text") && (
+                <>
+                  <input
+                    type="color"
+                    value={(selectedObject as fabric.IText).fill as string || "#000000"}
+                    onChange={(e) => {
+                      const canvas = fabricRef.current;
+                      if (!canvas || !selectedObject) return;
+                      (selectedObject as fabric.IText).set({ fill: e.target.value });
+                      canvas.renderAll();
+                      forceUpdate((n) => n + 1);
+                    }}
+                    title="Text color"
+                    style={{ width: "28px", height: "28px", border: "1px solid #000", cursor: "pointer", padding: 0 }}
+                  />
+                </>
+              )}
+
+              <div style={styles.toolbarDivider} />
+
               {/* Delete */}
               <button onClick={deleteSelected} style={styles.btn}>
                 Delete
@@ -1543,6 +1975,132 @@ export default function CanvasEditor({
               <button onClick={clearCanvas} style={styles.btn}>
                 Clean Page
               </button>
+
+              {/* Save canvas as image/video */}
+              <button onClick={() => setShowSaveFormatPopup(true)} style={styles.btn}>
+                Save
+              </button>
+
+              {/* Resize canvas — only available to the original creator. Collaborators
+                  inherit the frame so the existing composition isn't broken. */}
+              {!isCollaborative && (
+                <button
+                  onClick={() => setShowResizeDialog(true)}
+                  style={styles.btn}
+                  title={`Current: ${canvasDims.label} (${canvasDims.aspectLabel})`}
+                >
+                  Resize
+                </button>
+              )}
+
+              {/* Layer & Blend controls — visible when object selected */}
+              {selectedObject && (
+                <>
+                  <div style={styles.toolbarDivider} />
+
+                  {/* Layer ordering */}
+                  <button
+                    onClick={() => {
+                      const canvas = fabricRef.current;
+                      if (!canvas || !selectedObject) return;
+                      canvas.bringObjectToFront(selectedObject);
+                      canvas.renderAll();
+                      refreshLayers();
+                    }}
+                    style={styles.btn}
+                  >
+                    Front
+                  </button>
+                  <button
+                    onClick={() => {
+                      const canvas = fabricRef.current;
+                      if (!canvas || !selectedObject) return;
+                      canvas.bringObjectForward(selectedObject);
+                      canvas.renderAll();
+                      refreshLayers();
+                    }}
+                    style={styles.btn}
+                  >
+                    Up
+                  </button>
+                  <button
+                    onClick={() => {
+                      const canvas = fabricRef.current;
+                      if (!canvas || !selectedObject) return;
+                      canvas.sendObjectBackwards(selectedObject);
+                      // Don't go below locked background objects
+                      const idx = canvas.getObjects().indexOf(selectedObject);
+                      if (idx < lockedCountRef.current) {
+                        // Re-insert just above locked background objects
+                      canvas.remove(selectedObject);
+                      canvas.insertAt(lockedCountRef.current, selectedObject);
+                      }
+                      canvas.renderAll();
+                      refreshLayers();
+                    }}
+                    style={styles.btn}
+                  >
+                    Down
+                  </button>
+                  <button
+                    onClick={() => {
+                      const canvas = fabricRef.current;
+                      if (!canvas || !selectedObject) return;
+                      canvas.sendObjectToBack(selectedObject);
+                      // Don't go below locked background objects
+                      // Re-insert just above locked background objects
+                      canvas.remove(selectedObject);
+                      canvas.insertAt(lockedCountRef.current, selectedObject);
+                      canvas.renderAll();
+                      refreshLayers();
+                    }}
+                    style={styles.btn}
+                  >
+                    Back
+                  </button>
+
+                  <div style={styles.toolbarDivider} />
+
+                  {/* Blend mode */}
+                  <select
+                    value={(selectedObject as fabric.FabricObject & { globalCompositeOperation?: string }).globalCompositeOperation || "source-over"}
+                    onChange={(e) => {
+                      const canvas = fabricRef.current;
+                      if (!canvas || !selectedObject) return;
+                      selectedObject.set({ globalCompositeOperation: e.target.value as string });
+                      (selectedObject as fabric.FabricObject & { dirty?: boolean }).dirty = true;
+                      canvas.renderAll();
+                      forceUpdate((n) => n + 1);
+                    }}
+                    style={{
+                      fontFamily: MAC.font,
+                      fontSize: "14px",
+                      background: MAC.bg,
+                      border: `1px solid ${MAC.borderDark}`,
+                      borderRadius: 0,
+                      padding: "2px 4px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <option value="source-over">Normal</option>
+                    <option value="multiply">Multiply</option>
+                    <option value="screen">Screen</option>
+                    <option value="overlay">Overlay</option>
+                    <option value="darken">Darken</option>
+                    <option value="lighten">Lighten</option>
+                    <option value="color-dodge">Color Dodge</option>
+                    <option value="color-burn">Color Burn</option>
+                    <option value="hard-light">Hard Light</option>
+                    <option value="soft-light">Soft Light</option>
+                    <option value="difference">Difference</option>
+                    <option value="exclusion">Exclusion</option>
+                    <option value="hue">Hue</option>
+                    <option value="saturation">Saturation</option>
+                    <option value="color">Color</option>
+                    <option value="luminosity">Luminosity</option>
+                  </select>
+                </>
+              )}
             </>
           ) : (
             <>
@@ -1587,7 +2145,7 @@ export default function CanvasEditor({
                 style={{
                   ...styles.btn,
                   background: beatRef.current?.activeSection === "drums" ? "#FFF" : "#FFD8F6",
-                  fontWeight: beatRef.current?.activeSection === "drums" ? "bold" : "normal",
+                  fontWeight: "normal",
                 }}
               >
                 Drums
@@ -1597,7 +2155,7 @@ export default function CanvasEditor({
                 style={{
                   ...styles.btn,
                   background: beatRef.current?.activeSection === "melody" ? "#FFF" : "#E8A0FF",
-                  fontWeight: beatRef.current?.activeSection === "melody" ? "bold" : "normal",
+                  fontWeight: "normal",
                 }}
               >
                 Melody
@@ -1631,34 +2189,33 @@ export default function CanvasEditor({
                   : "Record"}
               </button>
 
-              {/* Mix Both — collaborative mode only */}
-              {isCollaborative && hasCreatorBeat && (
+              {/* Mix All — collaborative mode only */}
+              {isCollaborative && hasPreviousBeats && (
                 <>
                   <div style={styles.toolbarDivider} />
                   <button
                     onClick={() => {
-                      // Play both beats simultaneously
-                      const creatorPlaying = creatorBeatRef.current?.isPlaying;
                       const myPlaying = beatRef.current?.isPlaying;
-                      if (creatorPlaying || myPlaying) {
-                        // Stop both
-                        if (creatorPlaying) creatorBeatRef.current?.play();
+                      const anyPrevPlaying = prevBeatRefs.current.some((r) => r?.isPlaying);
+                      if (myPlaying || anyPrevPlaying) {
+                        // Stop all
                         if (myPlaying) beatRef.current?.play();
+                        prevBeatRefs.current.forEach((r) => { if (r?.isPlaying) r.play(); });
                       } else {
-                        // Start both at the same time
-                        creatorBeatRef.current?.play();
+                        // Start all at the same time
+                        prevBeatRefs.current.forEach((r) => r?.play());
                         beatRef.current?.play();
                       }
                       forceUpdate((n) => n + 1);
                     }}
                     style={{
                       ...styles.btn,
-                      background: (creatorBeatRef.current?.isPlaying && beatRef.current?.isPlaying)
+                      background: (prevBeatRefs.current.some((r) => r?.isPlaying) && beatRef.current?.isPlaying)
                         ? "#FF6B9D" : "#E8A0FF",
-                      fontWeight: "bold",
+                      fontWeight: "normal",
                     }}
                   >
-                    {(creatorBeatRef.current?.isPlaying && beatRef.current?.isPlaying) ? "Stop Mix" : "Mix Both"}
+                    {(prevBeatRefs.current.some((r) => r?.isPlaying) && beatRef.current?.isPlaying) ? "Stop Mix" : "Mix All"}
                   </button>
                 </>
               )}
@@ -1684,21 +2241,139 @@ export default function CanvasEditor({
         </div>
       </div>
 
+      {/* ─── Layer Panel (right side, desktop only, canvas mode) ─── */}
+      {isDesktop && activeTab === "canvas" && (
+        <div
+          style={{
+            ...styles.sidebar,
+            ...styles.sidebarDesktop,
+            width: "180px",
+          }}
+        >
+          <div style={styles.paletteTitleBar}>
+            <div style={{ width: "10px", height: "10px", border: "1px solid #000", background: "#FFD8F6" }} />
+            <span>Layers</span>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "4px" }}>
+            {userLayers.length === 0 ? (
+              <p style={{ fontFamily: MAC.font, fontSize: "12px", color: "#808080", textAlign: "center", padding: "12px 0" }}>
+                No layers yet
+              </p>
+            ) : (
+              userLayers.map((obj, i) => {
+                const isSelected = selectedObject === obj;
+                const thumb = layerThumbs.get(obj);
+                const blendMode = (obj as fabric.FabricObject & { globalCompositeOperation?: string }).globalCompositeOperation;
+                const blendLabel = blendMode && blendMode !== "source-over" ? blendMode : "";
+                const isDragOver = dragOverIdx === i && dragLayerIdx !== i;
+
+                return (
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={() => setDragLayerIdx(i)}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverIdx(i); }}
+                    onDragLeave={() => setDragOverIdx(null)}
+                    onDrop={() => {
+                      if (dragLayerIdx === null || dragLayerIdx === i) return;
+                      const canvas = fabricRef.current;
+                      if (!canvas) return;
+                      // userLayers is reversed (top first), so map back to canvas indices
+                      const allObjs = canvas.getObjects();
+                      const fromObj = userLayers[dragLayerIdx];
+                      const toObj = userLayers[i];
+                      const toCanvasIdx = allObjs.indexOf(toObj);
+                      canvas.remove(fromObj);
+                      canvas.insertAt(toCanvasIdx, fromObj);
+                      canvas.renderAll();
+                      refreshLayers();
+                      setDragLayerIdx(null);
+                      setDragOverIdx(null);
+                    }}
+                    onDragEnd={() => { setDragLayerIdx(null); setDragOverIdx(null); }}
+                    onClick={() => {
+                      const canvas = fabricRef.current;
+                      if (!canvas) return;
+                      canvas.setActiveObject(obj);
+                      canvas.renderAll();
+                      setSelectedObject(obj);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "3px 4px",
+                      marginBottom: "1px",
+                      background: isSelected ? "#000066" : isDragOver ? "#E0D0F0" : "transparent",
+                      color: isSelected ? "#FFF" : "#000",
+                      cursor: "grab",
+                      borderRadius: 0,
+                      border: isDragOver ? "1px dashed #000066" : isSelected ? "1px solid #000" : "1px solid transparent",
+                      fontFamily: MAC.font,
+                      fontSize: "11px",
+                      userSelect: "none",
+                      opacity: dragLayerIdx === i ? 0.4 : 1,
+                    }}
+                  >
+                    {/* Thumbnail */}
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        flexShrink: 0,
+                        background: "#FFFFFF",
+                        border: "1px solid #808080",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {thumb ? (
+                        <img
+                          src={thumb}
+                          alt=""
+                          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                          draggable={false}
+                        />
+                      ) : (
+                        <span style={{ fontSize: "9px", color: "#808080" }}>?</span>
+                      )}
+                    </div>
+                    {/* Label */}
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "12px", fontFamily: "'VT323', monospace" }}>
+                      {blendLabel || (() => {
+                        if (obj.type === "i-text" || obj.type === "text") return `"${((obj as fabric.IText).text || "").slice(0, 12)}"`;
+                        if (obj.type === "path") return "Scribble";
+                        if (obj.type === "image") {
+                          const bombNames = ["Fat Man", "Little Boy", "Daisy Cutter", "MOAB", "Hellfire", "Paveway", "Tomahawk", "Napalm", "Bunker Buster", "Stinger", "F-16 Falcon", "B-52", "SR-71", "F-117 Stealth", "Spitfire", "Mustang P-51", "Blackbird", "Valkyrie", "Enola Gay", "Bockscar", "Thunderbolt", "Warthog A-10", "Raptor F-22", "Nighthawk", "Phantom F-4", "MiG-21", "Concorde", "Lancaster", "Mosquito", "Zero"];
+                          const idx = fabricRef.current ? fabricRef.current.getObjects().indexOf(obj) : i;
+                          return bombNames[idx % bombNames.length];
+                        }
+                        return "Mystery";
+                      })()}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ─── Share Popup (Mac Alert Dialog) ─── */}
-      {showSharePopup && (
+      {/* Background removal choice popup */}
+      {showBgRemovalPopup && pendingUploadFile && (
         <div style={styles.overlay}>
           <div style={styles.dialog}>
-            {/* Dialog title bar */}
             <div style={styles.titleBar}>
               <div
                 style={styles.closeBox}
-                onClick={() => setShowSharePopup(false)}
+                onClick={() => { setShowBgRemovalPopup(false); setPendingUploadFile(null); }}
               />
-              <span style={styles.titleText}>Lovebomb Sent</span>
+              <span style={styles.titleText}>Upload Image</span>
               <span />
             </div>
-
-            {/* Dialog body */}
             <div style={styles.dialogBody}>
               <h2
                 style={{
@@ -1707,7 +2382,192 @@ export default function CanvasEditor({
                   fontWeight: 300,
                   color: "#000066",
                   fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
-                  textShadow: "-2px 3px 6px rgba(0,0,0,0.15)",
+                  textShadow: "-2.5px 4px 9px rgba(0,0,0,0.25), 0px 3.3px 3.3px rgba(0,0,0,0.25)",
+                }}
+              >
+                Remove background?
+              </h2>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "14px",
+                  color: "#000000",
+                  fontFamily: MAC.font,
+                  textAlign: "center",
+                }}
+              >
+                Turn your image into a sticker with transparent background, or keep the original image as-is.
+              </p>
+              <div style={{ display: "flex", width: "100%", gap: "8px" }}>
+                <button
+                  onClick={() => addImageToCanvas(pendingUploadFile, true)}
+                  className="aqua-cta"
+                  style={{ flex: 1, padding: "8px 16px" }}
+                >
+                  Make Sticker
+                </button>
+                <button
+                  onClick={() => addImageToCanvas(pendingUploadFile, false)}
+                  className="aqua-cta"
+                  style={{ flex: 1, padding: "8px 16px" }}
+                >
+                  Keep Original
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resize canvas dialog (mid-session size change, CapCut-style) */}
+      {showResizeDialog && (
+        <div style={styles.overlay}>
+          <CanvasSizeDialog
+            inline
+            initialSize={activeCanvasSize}
+            title="Resize canvas"
+            subtitle="Change the frame. Your existing artwork stays in place — reposition anything that falls outside."
+            confirmLabel="Apply"
+            onConfirm={(size) => {
+              setActiveCanvasSize(size);
+              setShowResizeDialog(false);
+            }}
+            onCancel={() => setShowResizeDialog(false)}
+          />
+        </div>
+      )}
+
+      {/* Save Format Popup */}
+      {showSaveFormatPopup && (
+        <div style={styles.overlay}>
+          <div style={styles.dialog}>
+            <div style={styles.titleBar}>
+              <div
+                style={styles.closeBox}
+                onClick={() => setShowSaveFormatPopup(false)}
+              />
+              <span style={styles.titleText}>Save Canvas</span>
+              <span />
+            </div>
+            <div style={styles.dialogBody}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "32px",
+                  fontWeight: 300,
+                  color: "#000066",
+                  fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
+                  textShadow: "-2.5px 4px 9px rgba(0,0,0,0.25), 0px 3.3px 3.3px rgba(0,0,0,0.25)",
+                }}
+              >
+                Save your creation
+              </h2>
+              <p
+                style={{
+                  margin: "8px 0 16px",
+                  fontSize: "14px",
+                  color: "#000000",
+                  fontFamily: "'ChiKareGo2', 'VT323', 'Geneva', monospace",
+                }}
+              >
+                Choose a format:
+              </p>
+              <div style={{ display: "flex", width: "100%", gap: "12px" }}>
+                <button
+                  className="aqua-cta"
+                  style={{ flex: 1, padding: "10px 16px", fontSize: "16px" }}
+                  onClick={() => {
+                    setShowSaveFormatPopup(false);
+                    const canvas = fabricRef.current;
+                    if (!canvas) return;
+                    const dataUrl = canvas.toDataURL({ format: "png", quality: 1, multiplier: 2 });
+                    const link = document.createElement("a");
+                    link.download = `lovebomb-${Date.now()}.png`;
+                    link.href = dataUrl;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                >
+                  Save as PNG
+                </button>
+                <button
+                  className="aqua-cta"
+                  style={{ flex: 1, padding: "10px 16px", fontSize: "16px" }}
+                  onClick={async () => {
+                    setShowSaveFormatPopup(false);
+                    const canvas = fabricRef.current;
+                    if (!canvas) return;
+                    const htmlCanvas = canvas.getElement() as HTMLCanvasElement;
+                    // Pump the canvas a few times so the static image is present in the
+                    // backing store before captureStream starts producing frames.
+                    for (let i = 0; i < 3; i++) {
+                      canvas.renderAll();
+                      await new Promise((r) => setTimeout(r, 30));
+                    }
+                    try {
+                      const result = await exportCanvasWithBeat({
+                        canvas: htmlCanvas,
+                        beatPattern: beatData,
+                        filename: `lovebomb-${Date.now()}`,
+                        durationSeconds: 6,
+                      });
+                      downloadBlob(result.blob, result.filename);
+                    } catch (err) {
+                      console.error("[Save as MP4] failed:", err);
+                      alert("Failed to save video. Please try again!");
+                    }
+                  }}
+                >
+                  Save as MP4
+                </button>
+              </div>
+              <button
+                className="aqua-cta"
+                style={{ width: "100%", padding: "6px 16px", marginTop: "8px", fontSize: "14px" }}
+                onClick={() => setShowSaveFormatPopup(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSharePopup && (
+        <div style={styles.overlay}>
+          <div style={styles.dialog}>
+            {/* Dialog title bar */}
+            <div style={styles.titleBar}>
+              <div style={styles.closeBox} />
+              <span style={styles.titleText}>Lovebomb Sent</span>
+              {/* Red square close button — same size as left closeBox */}
+              <button
+                onClick={() => setShowSharePopup(false)}
+                aria-label="Close"
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  border: `1px solid ${MAC.borderDark}`,
+                  background: "#ff3b30",
+                  cursor: "pointer",
+                  padding: 0,
+                  borderRadius: 0,
+                  flexShrink: 0,
+                }}
+              />
+            </div>
+
+            {/* Dialog body */}
+            <div style={styles.dialogBody}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "36px",
+                  fontWeight: 300,
+                  color: "#000066",
+                  fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
+                  textShadow: "-2.5px 4px 9px rgba(0,0,0,0.25), 0px 3.3px 3.3px rgba(0,0,0,0.25)",
                 }}
               >
                 Lovebomb saved!
@@ -1717,7 +2577,8 @@ export default function CanvasEditor({
                   margin: 0,
                   fontSize: "16px",
                   color: "#000000",
-                  fontFamily: "'Apple Garamond Light', 'EB Garamond', Garamond, Georgia, serif",
+                  fontFamily: "'ChiKareGo2', 'VT323', 'Geneva', monospace",
+                  letterSpacing: "0.5px",
                 }}
               >
                 Share this link with someone special:
@@ -1742,11 +2603,92 @@ export default function CanvasEditor({
                   Share
                 </button>
                 <button
-                  onClick={() => setShowSharePopup(false)}
+                  onClick={async () => {
+                    if (exportingTimelapse) return;
+                    setExportingTimelapse(true);
+                    setTimelapseProgress(0);
+                    try {
+                      console.log("[Timelapse] export starting");
+                      // Try cached snapshot first
+                      let videoBlob = lastTimelapseBlobRef.current;
+                      console.log("[Timelapse] cached blob size:", videoBlob?.size ?? 0);
+                      // Then try to grab a fresh snapshot from the running recorder
+                      if (!videoBlob || videoBlob.size === 0) {
+                        videoBlob = await timelapseRef.current?.snapshot() ?? null;
+                        console.log("[Timelapse] live snapshot size:", videoBlob?.size ?? 0);
+                      }
+                      // Last-resort fallback: capture a 3-second live recording from the current canvas.
+                      // This always produces a usable video even if the silent recorder failed for any reason.
+                      if (!videoBlob || videoBlob.size === 0) {
+                        console.warn("[Timelapse] silent recording empty, falling back to live capture");
+                        videoBlob = await new Promise<Blob | null>((resolve) => {
+                          try {
+                            const fabricCanvas = fabricRef.current;
+                            const lowerCanvas = canvasRef.current;
+                            if (!fabricCanvas || !lowerCanvas) { resolve(null); return; }
+                            const stream = (lowerCanvas as HTMLCanvasElement & { captureStream?: (fps?: number) => MediaStream }).captureStream?.(15);
+                            if (!stream) { resolve(null); return; }
+                            const mimeCandidates = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"];
+                            const mime = mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";
+                            const rec = new MediaRecorder(stream, { mimeType: mime });
+                            const chunks: Blob[] = [];
+                            rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+                            rec.onstop = () => {
+                              stream.getTracks().forEach((t) => t.stop());
+                              resolve(chunks.length ? new Blob(chunks, { type: mime }) : null);
+                            };
+                            rec.start(500);
+                            // Force ~15 paints over 3 seconds so MediaRecorder captures frames
+                            const totalFrames = 45;
+                            let i = 0;
+                            const tick = () => {
+                              try { fabricCanvas.requestRenderAll(); } catch { /* swallow */ }
+                              i++;
+                              if (i < totalFrames) {
+                                setTimeout(tick, 1000 / 15);
+                              } else {
+                                setTimeout(() => { try { rec.stop(); } catch { /* swallow */ } }, 200);
+                              }
+                            };
+                            tick();
+                          } catch (err) {
+                            console.warn("[Timelapse fallback] failed", err);
+                            resolve(null);
+                          }
+                        });
+                      }
+                      console.log("[Timelapse] final blob before export:", videoBlob?.size ?? 0);
+                      if (!videoBlob || videoBlob.size === 0) {
+                        alert("Couldn't capture a timelapse. Your browser may not support canvas recording.");
+                        setExportingTimelapse(false);
+                        return;
+                      }
+                      const userBeatData = beatData.tracks.some((t) => t.pattern.some(Boolean)) ? beatData : null;
+                      const result = await exportTimelapseWithAudio({
+                        videoBlob,
+                        beatPattern: userBeatData,
+                        width: canvasWidth,
+                        height: canvasHeight,
+                        filename: `lovebomb-timelapse-${(creatorName || "anon").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 20) || "anon"}-${new Date().toISOString().slice(0, 10)}`,
+                        onProgress: setTimelapseProgress,
+                      });
+                      downloadBlob(result.blob, result.filename);
+                    } catch (err) {
+                      console.error("[Timelapse export] failed", err);
+                      alert("Couldn't export timelapse. Please try again.");
+                    } finally {
+                      setExportingTimelapse(false);
+                      setTimelapseProgress(0);
+                    }
+                  }}
                   className="aqua-cta"
-                  style={{ flex: 1, padding: "6px 16px" }}
+                  style={{ flex: 1, padding: "6px 16px", opacity: exportingTimelapse ? 0.6 : 1 }}
+                  disabled={exportingTimelapse}
+                  title="Download a sped-up MP4 of how your lovebomb came together"
                 >
-                  Close
+                  {exportingTimelapse
+                    ? `Encoding... ${Math.round(timelapseProgress * 100)}%`
+                    : "Download timelapse"}
                 </button>
               </div>
             </div>

@@ -11,11 +11,11 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const { id: bomb_id } = await context.params;
     const body = await request.json();
-    const { contributor_name, canvas_json } = body;
+    const { contributor_name, canvas_json, beat_data } = body;
 
-    if (!contributor_name || !canvas_json) {
+    if (!contributor_name) {
       return NextResponse.json(
-        { error: "contributor_name and canvas_json are required" },
+        { error: "contributor_name is required" },
         { status: 400 }
       );
     }
@@ -34,15 +34,36 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    // Soft cap: max 20 contributors per chain to keep viewer/editor performant
+    const MAX_CONTRIBUTORS = 20;
+    const { count: existingCount } = await supabase
+      .from("bomb_layers")
+      .select("id", { count: "exact", head: true })
+      .eq("bomb_id", bomb_id);
+    if ((existingCount ?? 0) >= MAX_CONTRIBUTORS) {
+      return NextResponse.json(
+        {
+          error: `This lovebomb has reached its limit of ${MAX_CONTRIBUTORS} contributors. Start a new chain instead.`,
+          code: "CONTRIBUTOR_LIMIT_REACHED",
+        },
+        { status: 409 }
+      );
+    }
+
     const layerId = uuidv4();
 
-    const { error } = await supabase.from("bomb_layers").insert({
+    const insertData: Record<string, unknown> = {
       id: layerId,
       bomb_id,
       contributor_name: contributor_name.trim().slice(0, 30),
-      canvas_json,
+      canvas_json: canvas_json || { objects: [] },
       created_at: new Date().toISOString(),
-    });
+    };
+    if (beat_data) {
+      insertData.beat_data = beat_data;
+    }
+
+    const { error } = await supabase.from("bomb_layers").insert(insertData);
 
     if (error) {
       console.error("Supabase layer insert error:", error);

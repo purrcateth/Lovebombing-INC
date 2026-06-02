@@ -2,16 +2,22 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as fabric from "fabric";
-import type { BeatPattern } from "@/lib/types";
+import type { BeatPattern, BombLayer, CanvasSize } from "@/lib/types";
+import { CANVAS_SIZES } from "@/lib/types";
 import BeatSequencer, { BeatSequencerHandle } from "@/components/BeatSequencer";
+
+interface ContributorBeat {
+  name: string;
+  beatData: BeatPattern;
+}
 
 interface BombViewerProps {
   canvasJson: object;
-  layers: { canvas_json: object }[];
+  layers: BombLayer[];
   beatData?: BeatPattern | null;
+  creatorName?: string;
+  canvasSize?: CanvasSize;
 }
-
-const CANVAS_SIZE = 1080;
 
 const isGifSource = (src?: string) => Boolean(src && /(^data:image\/gif|\.gif($|\?))/i.test(src));
 
@@ -34,31 +40,67 @@ const TITLE_FONT = "'ChiKareGo2', 'VT323', 'Geneva', monospace";
 function canvasHasContent(canvasJson: object): boolean {
   const cj = canvasJson as { objects?: unknown[]; _beat_data?: unknown };
   if (!cj.objects || !Array.isArray(cj.objects)) return false;
-  // Filter out internal keys — only count real objects
   return cj.objects.length > 0;
 }
 
-export default function BombViewer({ canvasJson, layers, beatData }: BombViewerProps) {
+// Check if a layer has actual visual objects
+function layerHasContent(layerJson: object): boolean {
+  const lj = layerJson as { objects?: unknown[] };
+  if (!lj.objects || !Array.isArray(lj.objects)) return false;
+  return lj.objects.length > 0;
+}
+
+// Check if a beat pattern has any actual content
+function beatHasContent(beat: BeatPattern | null | undefined): boolean {
+  if (!beat || !beat.tracks) return false;
+  return beat.tracks.some((t) => t.pattern.some(Boolean));
+}
+
+export default function BombViewer({ canvasJson, layers, beatData, creatorName, canvasSize = "square" }: BombViewerProps) {
+  const dims = CANVAS_SIZES[canvasSize];
+  const CANVAS_W = dims.width;
+  const CANVAS_H = dims.height;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const beatContainerRef = useRef<HTMLDivElement>(null);
-  const beatGridRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const beatRef = useRef<BeatSequencerHandle>(null);
   const [scale, setScale] = useState(1);
-  const [beatScale, setBeatScale] = useState(1);
-  const [beatGridHeight, setBeatGridHeight] = useState<number | null>(null);
   const [, forceUpdate] = useState(0);
 
-  const hasCanvas = canvasHasContent(canvasJson) || layers.length > 0;
-  const hasBeat = !!(beatData && beatData.tracks.some((t) => t.pattern.some(Boolean)));
+  // Build list of all contributor beats
+  const allBeats: ContributorBeat[] = [];
+  if (beatHasContent(beatData) && beatData) {
+    allBeats.push({ name: creatorName || "Creator", beatData });
+  }
+  for (const layer of layers) {
+    if (beatHasContent(layer.beat_data)) {
+      allBeats.push({ name: layer.contributor_name, beatData: layer.beat_data! });
+    }
+  }
+
+  const hasCanvas = canvasHasContent(canvasJson) || layers.some((l) => l.canvas_json && layerHasContent(l.canvas_json));
+  const hasAnyBeat = allBeats.length > 0;
+
+  // Accordion state for each beat
+  const [openAccordions, setOpenAccordions] = useState<Set<number>>(new Set());
+  const beatRefs = useRef<(BeatSequencerHandle | null)[]>([]);
+  const beatContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [beatScales, setBeatScales] = useState<number[]>([]);
+
+  const toggleAccordion = (index: number) => {
+    setOpenAccordions((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!hasCanvas || !canvasRef.current) return;
 
     const canvas = new fabric.StaticCanvas(canvasRef.current, {
-      width: CANVAS_SIZE,
-      height: CANVAS_SIZE,
+      width: CANVAS_W,
+      height: CANVAS_H,
       backgroundColor: "#ffffff",
     });
 
@@ -118,8 +160,10 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
     const handleResize = () => {
       if (!containerRef.current) return;
       const containerWidth = containerRef.current.clientWidth;
-      const maxDisplaySize = Math.min(containerWidth, 800);
-      const newScale = maxDisplaySize / CANVAS_SIZE;
+      // Fit inside container width AND cap displayed dimensions at 800px
+      const scaleByWidth = containerWidth / CANVAS_W;
+      const scaleByCap = 800 / Math.max(CANVAS_W, CANVAS_H);
+      const newScale = Math.min(scaleByWidth, scaleByCap);
       setScale(newScale);
     };
 
@@ -133,47 +177,42 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
     };
   }, [canvasJson, layers, hasCanvas]);
 
-  // Scale beat grid to fit container
+  // Scale beat grids to fit container
   useEffect(() => {
-    if (!hasBeat || !beatContainerRef.current) return;
+    if (!hasAnyBeat) return;
 
-    const handleBeatResize = () => {
-      if (!beatContainerRef.current) return;
-      const containerWidth = beatContainerRef.current.clientWidth;
-      // Beat grid natural width: label(72) + padding(24) + 16 cells(44) + 15 gaps(3) + 3 group gaps(8) = ~869px
+    const measureScales = () => {
       const beatNaturalWidth = 72 + 24 + 16 * 44 + 15 * 3 + 3 * 8;
-      if (containerWidth < beatNaturalWidth) {
-        setBeatScale(containerWidth / beatNaturalWidth);
-      } else {
-        setBeatScale(1);
-      }
-
-      // Measure actual beat grid height for proper container sizing
-      if (beatGridRef.current) {
-        setBeatGridHeight(beatGridRef.current.scrollHeight);
-      }
+      const newScales = allBeats.map((_, i) => {
+        const container = beatContainerRefs.current[i];
+        if (!container) return 1;
+        const w = container.clientWidth;
+        return w < beatNaturalWidth ? w / beatNaturalWidth : 1;
+      });
+      setBeatScales(newScales);
     };
 
-    // Small delay to let the beat grid render first
-    const timer = setTimeout(handleBeatResize, 100);
-    window.addEventListener("resize", handleBeatResize);
+    const t1 = setTimeout(measureScales, 100);
+    const t2 = setTimeout(measureScales, 500);
+    window.addEventListener("resize", measureScales);
     return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", handleBeatResize);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("resize", measureScales);
     };
-  }, [hasBeat]);
+  }, [hasAnyBeat, allBeats.length, openAccordions.size]);
 
-  const handlePlayBeat = useCallback(() => {
-    if (beatRef.current) {
-      beatRef.current.play();
+  const handlePlayBeat = useCallback((index: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const ref = beatRefs.current[index];
+    if (ref) {
+      ref.play();
       setTimeout(() => forceUpdate((n) => n + 1), 50);
     }
   }, []);
 
-  const isPlaying = beatRef.current?.isPlaying ?? false;
-
   // Nothing to show
-  if (!hasCanvas && !hasBeat) {
+  if (!hasCanvas && !hasAnyBeat) {
     return null;
   }
 
@@ -198,8 +237,8 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
           >
             <div
               style={{
-                width: CANVAS_SIZE * scale,
-                height: CANVAS_SIZE * scale,
+                width: CANVAS_W * scale,
+                height: CANVAS_H * scale,
                 overflow: "hidden",
               }}
             >
@@ -215,119 +254,132 @@ export default function BombViewer({ canvasJson, layers, beatData }: BombViewerP
         </div>
       )}
 
-      {/* Beat playback section */}
-      {hasBeat && beatData && (
-        <div
-          ref={beatContainerRef}
-          style={{
-            marginTop: hasCanvas ? "16px" : 0,
-            border: "2px solid #000",
-            background: "#FFD8F6",
-            boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
-            overflow: "hidden",
-          }}
-        >
-          {/* Title bar */}
-          <div
-            style={{
-              height: "24px",
-              background:
-                "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #FFD8F6 1px, #FFD8F6 2px)",
-              borderBottom: "2px solid #000",
-              display: "flex",
-              alignItems: "center",
-              padding: "0 8px",
-            }}
-          >
-            <div style={{ width: "12px", height: "12px", border: "1px solid #000", background: "#FFD8F6" }} />
-            <span
-              style={{
-                flex: 1,
-                textAlign: "center",
-                fontFamily: TITLE_FONT,
-                fontSize: "16px",
-                fontWeight: "bold",
-              }}
-            >
-              Beat
-            </span>
-          </div>
+      {/* Beat sections — one accordion per contributor */}
+      {hasAnyBeat && (
+        <div style={{ marginTop: hasCanvas ? "16px" : 0 }}>
+          {allBeats.map((contrib, i) => {
+            const isOpen = openAccordions.has(i);
+            const isPlayingThis = beatRefs.current[i]?.isPlaying ?? false;
+            const hasDrums = contrib.beatData.tracks.some(
+              (t) => !t.instrument.startsWith("melody_") && !t.instrument.startsWith("recording_") && t.pattern.some(Boolean)
+            );
+            const hasMelody = contrib.beatData.tracks.some(
+              (t) => t.instrument.startsWith("melody_") && t.pattern.some(Boolean)
+            );
+            const hasRecording = contrib.beatData.tracks.some(
+              (t) => t.instrument.startsWith("recording_") && t.pattern.some(Boolean)
+            );
+            const contentLabel = [hasDrums && "Beat", hasMelody && "Melody", hasRecording && "Recording"].filter(Boolean).join(" & ");
 
-          {/* Play controls bar */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              padding: "8px 12px",
-              background: "#f0d8ec",
-              borderBottom: "1px solid #ccc",
-            }}
-          >
-            <button
-              onClick={handlePlayBeat}
-              style={{
-                width: 40,
-                height: 40,
-                border: "2px outset #DFDFDF",
-                background: isPlaying ? "#FF6B9D" : "#FFD8F6",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "20px",
-                fontFamily: MAC_FONT,
-                borderRadius: 0,
-              }}
-            >
-              {isPlaying ? "■" : "▶"}
-            </button>
-            <span
-              style={{
-                fontFamily: MAC_FONT,
-                fontSize: "18px",
-                color: "#000066",
-              }}
-            >
-              {isPlaying ? "Now playing..." : "Press play to listen"}
-            </span>
-            <span
-              style={{
-                fontFamily: MAC_FONT,
-                fontSize: "14px",
-                color: "#808080",
-                marginLeft: "auto",
-              }}
-            >
-              {beatData.bpm} BPM
-            </span>
-          </div>
+            return (
+              <div
+                key={i}
+                style={{
+                  border: "2px solid #000",
+                  background: "#FFD8F6",
+                  boxShadow: "2px 2px 0px rgba(0,0,0,0.5)",
+                  overflow: "hidden",
+                  marginBottom: i < allBeats.length - 1 ? "8px" : 0,
+                }}
+              >
+                {/* Accordion header / title bar */}
+                <div
+                  onClick={() => toggleAccordion(i)}
+                  style={{
+                    height: "28px",
+                    background:
+                      "repeating-linear-gradient(0deg, #FFF 0px, #FFF 1px, #FFD8F6 1px, #FFD8F6 2px)",
+                    borderBottom: isOpen ? "2px solid #000" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    padding: "0 8px",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <div style={{ width: "12px", height: "12px", border: "1px solid #000", background: "#FFD8F6" }} />
 
-          {/* Beat grid — scaled to fit without horizontal scroll */}
-          <div
-            style={{
-              overflow: "hidden",
-              height: beatGridHeight && beatScale < 1
-                ? `${beatGridHeight * beatScale}px`
-                : "auto",
-            }}
-          >
-            <div
-              ref={beatGridRef}
-              style={{
-                transform: beatScale < 1 ? `scale(${beatScale})` : "none",
-                transformOrigin: "top left",
-              }}
-            >
-              <BeatSequencer
-                ref={beatRef}
-                pattern={beatData}
-                onChange={() => {}}
-                readOnly
-                hideTransport
-              />
-            </div>
-          </div>
+                  {/* Play button in header */}
+                  <button
+                    onClick={(e) => handlePlayBeat(i, e)}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      border: "1px solid #808080",
+                      background: isPlayingThis ? "#FF6B9D" : "#FFD8F6",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "12px",
+                      fontFamily: MAC_FONT,
+                      borderRadius: 0,
+                      marginLeft: "8px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isPlayingThis ? "\u25A0" : "\u25B6"}
+                  </button>
+
+                  <span
+                    style={{
+                      flex: 1,
+                      textAlign: "center",
+                      fontFamily: TITLE_FONT,
+                      fontSize: "14px",
+                      fontWeight: "normal",
+                    }}
+                  >
+                    {contrib.name}&apos;s {contentLabel}
+                  </span>
+
+                  <span style={{ fontSize: "12px", fontFamily: MAC_FONT, color: "#808080" }}>
+                    {contrib.beatData.bpm} BPM
+                  </span>
+
+                  {/* Chevron */}
+                  <span
+                    style={{
+                      marginLeft: "6px",
+                      fontSize: "10px",
+                      fontFamily: MAC_FONT,
+                      transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s",
+                    }}
+                  >
+                    {"\u25BC"}
+                  </span>
+                </div>
+
+                {/* Beat grid — visible when accordion is open */}
+                {isOpen && (
+                  <div ref={(el) => { beatContainerRefs.current[i] = el; }}>
+                    <div
+                      style={{
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          transform: (beatScales[i] ?? 1) < 1 ? `scale(${beatScales[i]})` : "none",
+                          transformOrigin: "top left",
+                        }}
+                      >
+                        <BeatSequencer
+                          ref={(el) => { beatRefs.current[i] = el; }}
+                          pattern={contrib.beatData}
+                          onChange={() => {}}
+                          readOnly
+                          hideTransport
+                          showAll
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

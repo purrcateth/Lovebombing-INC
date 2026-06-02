@@ -32,14 +32,26 @@ export async function GET(_request: Request, context: RouteContext) {
 
     // Extract beat_data: check dedicated column first, then embedded in canvas_json
     let beat_data = bomb.beat_data ?? null;
-    if (!beat_data && bomb.canvas_json && typeof bomb.canvas_json === "object") {
+    let canvas_size = bomb.canvas_size ?? null;
+    if (bomb.canvas_json && typeof bomb.canvas_json === "object") {
       const cj = bomb.canvas_json as Record<string, unknown>;
-      if (cj._beat_data) {
-        beat_data = cj._beat_data;
-      }
+      if (!beat_data && cj._beat_data) beat_data = cj._beat_data;
+      if (!canvas_size && cj._canvas_size) canvas_size = cj._canvas_size as string;
     }
 
-    return NextResponse.json({ ...bomb, beat_data, layers: layers || [] });
+    // Extract beat_data from each layer too
+    const enrichedLayers = (layers || []).map((layer: Record<string, unknown>) => {
+      let layerBeat = layer.beat_data ?? null;
+      if (!layerBeat && layer.canvas_json && typeof layer.canvas_json === "object") {
+        const lcj = layer.canvas_json as Record<string, unknown>;
+        if (lcj._beat_data) {
+          layerBeat = lcj._beat_data;
+        }
+      }
+      return { ...layer, beat_data: layerBeat };
+    });
+
+    return NextResponse.json({ ...bomb, beat_data, canvas_size: canvas_size || "square", layers: enrichedLayers });
   } catch (err) {
     console.error("Get bomb error:", err);
     return NextResponse.json(
@@ -54,7 +66,7 @@ export async function PUT(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const body = await request.json();
-    const { canvas_json, thumbnail_data, beat_data } = body;
+    const { canvas_json, thumbnail_data, beat_data, canvas_size } = body;
 
     if (!canvas_json) {
       return NextResponse.json(
@@ -69,35 +81,39 @@ export async function PUT(request: Request, context: RouteContext) {
       thumbnail_url = thumbnail_data;
     }
 
-    // Embed beat_data inside canvas_json so it persists even without a dedicated column
-    const canvasWithBeat = { ...canvas_json };
-    if (beat_data) {
-      canvasWithBeat._beat_data = beat_data;
-    }
+    // Embed extras inside canvas_json so they persist even without dedicated columns
+    const canvasWithExtras = { ...canvas_json } as Record<string, unknown>;
+    if (beat_data) canvasWithExtras._beat_data = beat_data;
+    if (canvas_size) canvasWithExtras._canvas_size = canvas_size;
 
-    // Try saving with beat_data column first, fall back to without
+    // Try saving with all dedicated columns first, fall back step-by-step
     const baseData: Record<string, unknown> = {
-      canvas_json: canvasWithBeat,
+      canvas_json: canvasWithExtras,
       thumbnail_url,
       updated_at: new Date().toISOString(),
     };
 
-    // First try with dedicated beat_data column
+    // Attempt 1: with both dedicated columns
+    {
+      const update: Record<string, unknown> = { ...baseData };
+      if (beat_data !== undefined) update.beat_data = beat_data;
+      if (canvas_size !== undefined) update.canvas_size = canvas_size;
+      const { error } = await supabase.from("bombs").update(update).eq("id", id);
+      if (!error) return NextResponse.json({ success: true });
+      console.warn("Save with dedicated columns failed, falling back:", error.message);
+    }
+
+    // Attempt 2: with beat_data only (canvas_size column might be missing)
     if (beat_data !== undefined) {
       const { error } = await supabase
         .from("bombs")
         .update({ ...baseData, beat_data })
         .eq("id", id);
-
-      if (!error) {
-        return NextResponse.json({ success: true });
-      }
-
-      // Column doesn't exist — save without it (beat_data is still embedded in canvas_json)
+      if (!error) return NextResponse.json({ success: true });
       console.warn("Save with beat_data column failed, using canvas_json embed:", error.message);
     }
 
-    // Save without beat_data column — beat is embedded in canvas_json
+    // Attempt 3: canvas_json only — extras embedded inside
     const { error } = await supabase
       .from("bombs")
       .update(baseData)
